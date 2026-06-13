@@ -1,0 +1,2906 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Avanzado Danfoss (Alta y Baja)</title>
+    <!-- FUENTES ACTUALIZADAS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Condensed:wght@400;600;800&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ==== SOLAR PRO GLASS UI - TOKENS ==== */
+        :root {
+            /* Typography */
+            --font-primary: 'Roboto Condensed', sans-serif;
+            --font-secondary: 'Inter', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+            
+            /* Light Theme */
+            --bg-app: #f1f5f9;
+            --bg-surface: #ffffff;
+            --bg-glass: rgba(255, 255, 255, 0.85);
+            --bg-alt: rgba(0,0,0,0.05);
+            --bg-hover: rgba(0,0,0,0.08);
+            
+            --border-subtle: rgba(0,0,0,0.05);
+            --border-default: rgba(0,0,0,0.1);
+            --border-strong: rgba(0,0,0,0.2);
+            
+            --text-primary: #0f172a;
+            --text-secondary: #1e293b;
+            --text-muted: #475569;
+            
+            --accent-base: #f59e0b;
+            --accent-hover: #d97706;
+            --accent-ghost: rgba(245, 158, 11, 0.15);
+            --accent-text: #000000;
+            
+            /* Status Colors */
+            --status-success: #16a34a;
+            --status-success-light: rgba(22, 163, 74, 0.15);
+            --status-warning: #d97706;
+            --status-danger: #ef4444;
+            --status-danger-light: rgba(239, 68, 68, 0.15);
+            --status-info: #3b82f6;
+            
+            /* Shapes */
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
+            
+            /* Effects */
+            --shadow-soft: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --shadow-medium: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 10px var(--accent-ghost);
+            --blur-glass: blur(12px);
+            --transition-fast: all 0.1s ease;
+            --transition-default: all 0.2s ease;
+            
+            /* SVG Component Colors */
+            --svg-evap: #fef08a;
+            --svg-cond: #bae6fd;
+            --svg-comp: #fca5a5;
+        }
+
+        /* TEMA OSCURO (Pizarra Elegante con toques Glass) */
+        [data-theme="dark"] {
+            --bg-app: #0f172a;
+            --bg-surface: #1e293b;
+            --bg-glass: rgba(15, 23, 42, 0.85);
+            --bg-alt: #0b1120;
+            --bg-hover: #334155;
+            
+            --border-subtle: rgba(255,255,255,0.05);
+            --border-default: rgba(255,255,255,0.1);
+            --border-strong: rgba(255,255,255,0.2);
+            
+            --text-primary: #ffffff;
+            --text-secondary: #f8fafc;
+            --text-muted: #cbd5e1;
+
+            --accent-base: #fbbf24;
+            --accent-hover: #f59e0b;
+            --accent-ghost: rgba(251, 191, 36, 0.15);
+            --accent-text: #000000;
+
+            --status-success: #16a34a;
+            --status-success-light: rgba(22, 163, 74, 0.2);
+            --status-warning: #fbbf24;
+            --status-danger: #ef4444;
+            --status-danger-light: rgba(239, 68, 68, 0.2);
+            --status-info: #3b82f6;
+
+            --svg-evap: #854d0e;
+            --svg-cond: #0369a1;
+            --svg-comp: #991b1b;
+        }
+
+        body { 
+            font-family: var(--font-primary); background-color: var(--bg-app); 
+            padding: 20px; color: var(--text-primary); margin: 0; min-height: 100vh; overflow-x: hidden;
+        }
+
+        body::before, body::after { content: ''; position: fixed; border-radius: 50%; filter: blur(80px); z-index: -1; pointer-events: none; }
+        body::before { width: 400px; height: 400px; background: var(--accent-ghost); top: -100px; left: -100px; }
+        body::after { width: 500px; height: 500px; background: rgba(59, 130, 246, 0.15); bottom: -150px; right: -100px; }
+
+        .container { 
+            max-width: 1800px; width: 98%; margin: auto; background: var(--bg-glass); backdrop-filter: var(--blur-glass);
+            -webkit-backdrop-filter: var(--blur-glass); padding: 20px; border-radius: var(--radius-xl); 
+            border: 1px solid var(--border-default); box-shadow: var(--shadow-medium); box-sizing: border-box;
+        }
+
+        h1 { text-align: center; font-family: var(--font-primary); font-weight: 800; margin-top: 0; font-size: 28px; }
+        h3 { font-family: var(--font-primary); font-size: 20px; text-align: center; margin: 0 0 5px 0;}
+        
+        .layout-dual { display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; align-items: stretch; margin-bottom: 15px; width: 100%; overflow-x: auto; padding-bottom: 10px; box-sizing: border-box; }
+        .columna-presostato { 
+            flex: 1 1 240px; min-width: 210px; max-width: 280px; display: flex; flex-direction: column; align-items: center; 
+            background: var(--bg-surface); padding: 15px; border-radius: var(--radius-xl); border: 1px solid var(--border-default); box-shadow: var(--shadow-soft); box-sizing: border-box;
+        }
+        .columna-seguridad { 
+            flex: 1 1 170px; min-width: 150px; max-width: 210px; display: flex; flex-direction: column; align-items: center; 
+            background: var(--bg-surface); padding: 15px; border-radius: var(--radius-xl); border: 1px solid var(--border-default); box-shadow: var(--shadow-soft); box-sizing: border-box;
+        }
+        
+        .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 15px; font-weight: 600; text-align: center; }
+        .seccion-titulo { font-family: var(--font-primary); font-weight: 800; font-size: 20px; text-align: center; display: block; }
+
+        /* Estilos Carcasa Fotorrealista KP */
+        .danfoss-casing { background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); width: 210px; height: 220px; position: relative; box-shadow: var(--shadow-medium); display: flex; flex-direction: column; align-items: center; padding-top: 15px; margin-bottom: 15px; transition: background 0.3s; }
+        .danfoss-logo { color: var(--status-danger); font-family: var(--font-primary); font-style: italic; font-weight: 800; font-size: 16px; margin-top: 10px; letter-spacing: -0.5px; }
+
+        .kp-faceplate { background-color: #1a1a1c; color: #e2e8f0; border-radius: var(--radius-sm); border: 2px solid var(--border-strong); box-shadow: inset 0px 0px 20px rgba(0,0,0,1); width: 185px; height: 150px; display: flex; justify-content: space-between; padding: 8px; font-family: var(--font-primary); box-sizing: border-box; }
+        .kp-section { display: flex; flex-direction: column; align-items: center; width: 48%; }
+        .kp-header { font-size: 12px; font-weight: 400; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .kp-scale-container { display: flex; height: 80px; width: 100%; justify-content: center; position: relative; }
+        
+        .kp-labels-left, .kp-labels-right { display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; height: 100%; position: relative; font-weight: 600; line-height: 1; }
+        .kp-labels-left { align-items: flex-end; padding-right: 6px; }
+        .kp-labels-right { align-items: flex-start; padding-left: 6px; }
+        .kp-labels-left span::after { content: ''; position: absolute; right: -6px; top: 50%; width: 3px; height: 1px; background: #e2e8f0; }
+        .kp-labels-right span::after { content: ''; position: absolute; left: -6px; top: 50%; width: 3px; height: 1px; background: #e2e8f0; }
+        
+        /* Ranuras interactivas y Punteros */
+        .kp-slot { width: 10px; height: 100%; display: block; background: #0b0b0c; border: 1px solid #333; border-radius: 3px; position: relative; box-shadow: inset 0 2px 5px rgba(0,0,0,0.9); z-index: 2; cursor: grab; touch-action: none; }
+        /* Mejora UX: Ampliación del área táctil invisible para facilitar el agarre en móviles */
+        .kp-slot::after { content: ''; position: absolute; top: -10px; bottom: -10px; left: -20px; right: -20px; z-index: 4; }
+        
+        .kp-slot:active { cursor: grabbing; }
+        .kp-slot:active .kp-pointer { background: var(--accent-base); box-shadow: var(--shadow-glow); }
+        .kp-pointer { position: absolute; width: 16px; height: 5px; background: #cbd5e1; left: -4px; border: 1px solid #475569; border-radius: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.8); transition: background 0.1s, bottom 0.1s ease-out; z-index: 3; pointer-events: none; }
+        .kp-units { display: flex; justify-content: space-between; width: 100%; font-size: 9px; margin-top: 8px; color: #94a3b8; line-height: 1.2; }
+
+        /* Controles Base */
+        .control-group { width: 100%; margin-bottom: 10px; background: var(--bg-alt); padding: 10px; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); box-sizing: border-box; }
+        label { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px; }
+        select { background: var(--bg-surface); border: 1px solid var(--border-default); color: var(--text-primary); border-radius: var(--radius-md); font-size: 13px; padding: 8px 12px; cursor: pointer; outline: none; font-family: var(--font-secondary); transition: var(--transition-fast); }
+        select:focus { border-color: var(--accent-base); box-shadow: 0 0 0 3px var(--accent-ghost); }
+
+        /* Displays Digitales Duales (Presión y Temperatura) */
+        .digital-display { background-color: #1e293b; border-radius: var(--radius-md); box-shadow: inset 0 2px 8px rgba(0,0,0,0.5); padding: 8px; text-align: center; display: flex; flex-direction: column; gap: 4px; }
+        .digital-p { font-family: var(--font-primary); font-size: 24px; font-weight: 800; letter-spacing: 1px; color: #38bdf8; }
+        .digital-p.hp { color: #f87171; }
+        .digital-t { font-family: var(--font-mono); font-size: 12px; color: #cbd5e1; font-weight: 500; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+        .state-badge { font-size: 9px; padding: 2px 5px; border-radius: 10px; background: rgba(255,255,255,0.1); }
+
+        /* LEDs de Alarma SPDT */
+        .alarm-led { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); transition: all 0.2s; }
+        .alarm-led.off { background-color: #334155; }
+        .alarm-led.on { background-color: #ef4444; box-shadow: 0 0 8px #ef4444, inset 0 1px 3px rgba(255,255,255,0.4); animation: pulse-danger 1s infinite; }
+
+        /* Estilos de Alarma para Displays Digitales */
+        .digital-display.tripped {
+            background-color: var(--status-danger);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 0 15px var(--status-danger);
+            animation: pulse-danger 1.5s infinite;
+        }
+        .digital-display.tripped .digital-p,
+        .digital-display.tripped .digital-t,
+        .digital-display.tripped .state-badge { color: #ffffff !important; }
+        .digital-display.tripped .state-badge { background: rgba(0,0,0,0.3); }
+
+        @keyframes pulse-danger {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Controles de Seguridad Manual (Carcasas Fotorrealistas) */
+        .safety-panel-container { width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 10px; border-top: 1px dashed var(--border-strong); padding-top: 10px; }
+        .safety-casing { height: 220px; margin-top: 0; width: 160px; }
+        .safety-casing .kp-faceplate.single { width: 140px; height: 150px; display: flex; justify-content: center; position: relative; }
+        .safety-casing .kp-section { width: 75%; }
+        .kp-reset-label { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 9px; color: #cbd5e1; text-align: center; padding-left: 4px; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+        
+        .danfoss-reset-btn { position: absolute; top: -12px; right: 25px; width: 14px; height: 14px; border-radius: 4px 4px 0 0; border: 1px solid #333; transition: all 0.2s ease; z-index: 10; font-family: var(--font-primary); }
+        .danfoss-reset-btn.normal { top: -6px; height: 8px; background: #475569; cursor: not-allowed; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        .danfoss-reset-btn.tripped { top: -14px; height: 16px; background: var(--status-danger); cursor: not-allowed; box-shadow: inset 0 2px 4px rgba(255,255,255,0.3); }
+        .danfoss-reset-btn.ready { top: -14px; height: 16px; background: #22c55e; cursor: pointer; box-shadow: 0 0 10px #22c55e, inset 0 2px 4px rgba(255,255,255,0.5); animation: pulse-green 1.5s infinite; }
+        .danfoss-reset-btn.ready:hover { background: #16a34a; animation: none; }
+        
+        .danfoss-test-btn { position: absolute; top: -8px; left: 35px; width: 22px; height: 8px; background: #1e293b; border: 1px solid #000; border-radius: 3px 3px 0 0; cursor: pointer; color: #cbd5e1; font-family: var(--font-primary); font-size: 7px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.1s; letter-spacing: 1px;}
+        .danfoss-test-btn:active { top: -4px; height: 4px; background: #0f172a; color: transparent; }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        .color-hp { color: var(--status-danger); }
+        .color-lp { color: var(--status-info); }
+
+        /* Botón de Pausa */
+        .btn-action { background: var(--bg-alt); color: var(--text-primary); border: 1px solid var(--border-strong); padding: 0 20px; border-radius: var(--radius-md); font-family: var(--font-primary); font-weight: 600; font-size: 15px; cursor: pointer; transition: var(--transition-default); display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; height: 42px; }
+        .btn-action:hover { background: var(--bg-hover); border-color: var(--accent-base); }
+        .btn-action.paused { background: var(--accent-base); color: var(--accent-text); border-color: rgba(0,0,0,0.2); box-shadow: var(--shadow-glow); animation: pulse 2s infinite; font-weight: 800; }
+        .btn-action.paused:hover { background: var(--accent-hover); transform: translateY(-1px); border-color: rgba(0,0,0,0.4); animation: none; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); } 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); } }
+
+        /* Barra de Presiones Dinámica Lineal Optimizada */
+        .pressure-bar-container { position: relative; height: 115px; width: 100%; margin: 25px 0 10px 0; }
+        .cycle-delimeter { position: absolute; top: 48px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; font-family: var(--font-primary); font-weight: 800; font-size: 11px; white-space: nowrap; transition: left 0.1s ease-out; pointer-events: none; z-index: 10; }
+        .cycle-delimeter.lp { color: var(--status-info); }
+        .cycle-delimeter.hp { color: var(--status-danger); }
+        .cycle-delimeter .delimeter-line { width: 1px; height: 40px; background: currentColor; margin-bottom: 2px; }
+        .cycle-delimeter .delimeter-text { background: var(--bg-surface); padding: 2px 6px; border-radius: var(--radius-sm); border: 1px solid currentColor; box-shadow: var(--shadow-soft); line-height: 1.1; text-align: center; }
+
+        /* Tramos de transición intermedios */
+        .cycle-transition { position: absolute; display: flex; justify-content: center; align-items: center; font-family: var(--font-primary); font-size: 10px; font-weight: 800; white-space: nowrap; transition: left 0.1s ease-out, width 0.1s ease-out; z-index: 9; pointer-events: none; text-shadow: 0 0 2px var(--bg-surface), 0 0 4px var(--bg-surface); }
+        .cycle-transition.comp { top: 58px; color: var(--status-warning); }
+        .cycle-transition.exp { top: 76px; color: var(--status-info); filter: brightness(1.2); }
+        .t-line { flex: 1; height: 1px; background: currentColor; opacity: 0.6; position: relative; }
+        .t-line.r::after { content: '▶'; position: absolute; right: -2px; top: -4.5px; font-size: 8px; opacity: 1; color: currentColor; }
+        .t-line.l::before { content: '◀'; position: absolute; left: -2px; top: -4.5px; font-size: 8px; opacity: 1; color: currentColor; }
+
+        .pressure-bar-bg { position: relative; height: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-strong); overflow: hidden; background: #1e293b; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        .pressure-bar-zone { position: absolute; top: 0; bottom: 0; transition: left 0.3s ease, width 0.3s ease; opacity: 0.9; }
+        
+        .pressure-bar-indicator { position: absolute; top: 22px; transform: translateX(-50%); transition: left 0.1s ease-out; background: var(--bg-surface); border: 2px solid; border-radius: 6px; padding: 2px 6px; font-family: var(--font-mono); font-size: 12px; font-weight: 800; text-align: center; z-index: 15; box-shadow: var(--shadow-medium); line-height: 1.1; white-space: nowrap; pointer-events: none; }
+        .pressure-bar-indicator::before { content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%); border-width: 0 5px 6px; border-style: solid; }
+        .pressure-bar-indicator.lp { border-color: var(--status-info); color: var(--status-info); z-index: 16; }
+        .pressure-bar-indicator.lp::before { border-color: transparent transparent var(--status-info) transparent; }
+        .pressure-bar-indicator.hp { border-color: var(--status-danger); color: var(--status-danger); z-index: 15; }
+        .pressure-bar-indicator.hp::before { border-color: transparent transparent var(--status-danger) transparent; }
+        .dyn-t { font-size: 10px; color: var(--text-muted); display: block; font-weight: 600; margin-top: 1px; }
+        
+        #pressure-bar-scale-svg { position: absolute; top: 16px; left: 0; width: 100%; height: 30px; overflow: visible; }
+        #pressure-bar-scale-svg text { font-size: 10px; fill: var(--text-muted); font-family: var(--font-mono); text-anchor: middle; font-weight: 600; }
+        #pressure-bar-scale-svg line { stroke: var(--text-muted); }
+        
+        /* Marcadores de Calibración Flotantes (Motor Anti-Colisiones) */
+        .cal-marker { position: absolute; top: -2px; height: 20px; width: 8px; background: var(--bg-surface); border: 2px solid; border-radius: 3px; transform: translateX(-50%); z-index: 10; cursor: ew-resize; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-soft); transition: border-color 0.2s; }
+        .cal-line { position: absolute; bottom: 100%; left: 50%; width: 1.5px; background: var(--text-muted); opacity: 0.6; pointer-events: none; transform-origin: bottom center; transition: height 0.2s, transform 0.2s; }
+        .cal-lbl { position: absolute; left: 50%; font-size: 9px; font-family: var(--font-mono); font-weight: 800; background: var(--bg-surface); color: var(--text-primary); padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-default); white-space: nowrap; pointer-events: none; box-shadow: var(--shadow-soft); z-index: 12; transition: bottom 0.2s, transform 0.2s; }
+
+        .cal-marker:hover, .cal-marker:active { border-color: var(--accent-base) !important; z-index: 15; }
+        
+        .cal-marker.saf { background: var(--status-danger); border-color: var(--text-primary); z-index: 11; }
+        .cal-marker.saf .cal-line { background: var(--status-danger); opacity: 0.8; }
+        .cal-marker.saf .cal-lbl { color: var(--status-danger); border-color: var(--status-danger); }
+        
+        .cal-marker.color-hp-out .cal-lbl, .cal-marker.color-lp-out .cal-lbl { color: var(--status-danger); border-color: var(--status-danger); }
+        .cal-marker.color-hp-in .cal-lbl, .cal-marker.color-lp-in .cal-lbl { color: var(--status-info); border-color: var(--status-info); }
+        .cal-marker.color-hp-out .cal-line, .cal-marker.color-lp-out .cal-line { background: var(--status-danger); }
+        .cal-marker.color-hp-in .cal-line, .cal-marker.color-lp-in .cal-line { background: var(--status-info); }
+
+        /* Inputs Editables */
+        .editable-val { background: var(--bg-surface); border: 1px solid var(--border-default); color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; font-weight: 800; width: 45px; text-align: center; border-radius: var(--radius-md); padding: 4px 0; outline: none; transition: var(--transition-fast); cursor: text; margin: 0 4px; }
+        .editable-val:focus { border-color: var(--accent-base); box-shadow: 0 0 0 3px var(--accent-ghost); }
+        .editable-val.color-hp { color: var(--status-danger); }
+        .editable-val.color-lp { color: var(--status-info); }
+        .editable-val::-webkit-outer-spin-button, .editable-val::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .editable-val[type=number] { -moz-appearance: textfield; }
+
+        /* Contenedor del SVG y Modo Pantalla Completa */
+        .ciclo-panel { flex: 2 1 450px; min-width: 350px; max-width: 820px; background: var(--bg-surface); border: 1px solid var(--border-default); padding: 15px; border-radius: var(--radius-xl); box-shadow: var(--shadow-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; position: relative; transition: all 0.3s ease; }
+        .ciclo-panel.fullscreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; max-width: none; z-index: 9999; border-radius: 0; background: var(--bg-app); padding: 40px 20px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; overflow-y: auto; overflow-x: hidden; }
+        
+        /* Herramientas integradas en el panel (Expandir / Pausar) */
+        .ciclo-panel-tools { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 100; }
+        .ciclo-panel.fullscreen .ciclo-panel-tools { position: fixed; top: 20px; right: max(20px, calc(50vw - 615px)); transition: right 0.3s ease; }
+        .btn-tool { background: var(--bg-alt); border: 1px solid var(--border-strong); color: var(--text-primary); cursor: pointer; border-radius: var(--radius-md); padding: 6px 12px; font-family: var(--font-primary); font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 5px; transition: var(--transition-fast); box-shadow: var(--shadow-soft); }
+        .ciclo-panel.fullscreen .btn-tool { font-size: 19.5px; padding: 9px 18px; }
+        .btn-tool:hover { background: var(--bg-hover); border-color: var(--accent-base); color: var(--accent-text); }
+        .ciclo-panel.fullscreen .btn-tool.fs-active { background: var(--status-danger); color: white; border-color: var(--status-danger); }
+        .ciclo-panel.fullscreen .btn-tool.fs-active:hover { filter: brightness(1.2); }
+        .btn-tool.paused { background: var(--accent-base); color: var(--accent-text); border-color: rgba(0,0,0,0.2); box-shadow: var(--shadow-glow); animation: pulse 2s infinite; }
+
+        /* Contenedores fijos para mantener la escala original */
+        .svg-container { width: 100%; max-width: 820px; position: relative; display: flex; justify-content: center; margin: 0 auto; transition: max-width 0.3s ease; }
+        .status-container { display: flex; justify-content: space-between; align-items: stretch; width: 100%; max-width: 820px; gap: 15px; margin-top: 15px; box-sizing: border-box; margin-left: auto; margin-right: auto; transition: max-width 0.3s ease; }
+
+        /* Escalado 150% en modo expandido (Fullscreen) */
+        .ciclo-panel.fullscreen .svg-container,
+        .ciclo-panel.fullscreen .status-container { max-width: 1230px; }
+        .ciclo-panel.fullscreen .seccion-titulo { font-size: 30px; transition: font-size 0.3s ease; }
+        .ciclo-panel.fullscreen .subtitle { font-size: 19.5px; margin-bottom: 25px; transition: font-size 0.3s ease; }
+        .ciclo-panel.fullscreen .status-container > div:first-child { font-size: 16.5px !important; padding: 12px 22px !important; transition: all 0.3s ease; }
+        .ciclo-panel.fullscreen .status-container > div:first-child div { gap: 12px !important; }
+        .ciclo-panel.fullscreen .status-container > div:first-child div div { width: 15px !important; height: 15px !important; }
+        .ciclo-panel.fullscreen .btn-bypass { font-size: 16.5px; transition: font-size 0.3s ease; }
+        .ciclo-panel.fullscreen #estadoTextoPrincipal { font-size: 22.5px !important; transition: font-size 0.3s ease; }
+        .ciclo-panel.fullscreen #motivoCorte { font-size: 16.5px !important; transition: font-size 0.3s ease; }
+
+        /* Status Global Integrado */
+        .status-panel { padding: 8px 15px; text-align: center; border-radius: var(--radius-lg); color: white; font-family: var(--font-primary); font-weight: 800; display: flex; flex-direction: column; transition: var(--transition-default); text-transform: uppercase; width: 100%; box-sizing: border-box; }
+        .status-panel.on { background-color: var(--status-success); box-shadow: 0 5px 15px -3px var(--status-success-light); }
+        .status-panel.off { background-color: var(--status-danger); box-shadow: 0 5px 15px -3px var(--status-danger-light); }
+        .motivo-corte { font-family: var(--font-secondary); font-weight: 400; margin-top: 2px; text-transform: none; opacity: 0.9; }
+
+        .seccion-fallos { background: var(--bg-surface); border: 1px solid var(--border-default); padding: 20px; border-radius: var(--radius-xl); margin-top: 20px; box-shadow: var(--shadow-soft); display: flex; flex-direction: column; gap: 10px; }
+        .alerta-fallo { background: var(--status-danger-light); padding: 12px; border-radius: var(--radius-md); border-left: 4px solid var(--status-danger); margin-top: 5px; font-size: 14px; color: var(--text-secondary); display: none; }
+        
+        /* Tarjetas de Conceptos */
+        .concept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-top: 10px; }
+        .concept-card { background: var(--bg-alt); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .concept-title { font-family: var(--font-primary); font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .concept-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+        details > summary { list-style: none; cursor: pointer; outline: none; transition: opacity 0.2s; }
+        details > summary::-webkit-details-marker { display: none; }
+        details > summary:hover { opacity: 0.8; }
+        .toggle-icon { transition: transform 0.3s ease; font-size: 14px; color: var(--text-muted); }
+        details[open] summary .toggle-icon { transform: rotate(180deg); }
+        
+        /* Estilo para las válvulas interactivas */
+        .valve-instance { cursor: pointer; }
+        .valve-instance:hover .valve-body { fill: var(--status-warning); }
+
+        /* Botones de Bypass Manual */
+        .btn-bypass { background: var(--bg-surface); border: 1px solid var(--border-strong); color: var(--text-primary); font-family: var(--font-primary); font-weight: 800; font-size: 11px; border-radius: var(--radius-md); cursor: pointer; transition: all 0.1s ease; user-select: none; -webkit-user-select: none; box-shadow: var(--shadow-soft); display: flex; align-items: center; justify-content: center; text-transform: uppercase; padding: 0 10px; }
+        .btn-bypass:hover { background: var(--bg-hover); }
+        .btn-bypass.active { background: var(--status-warning); color: #000; transform: translateY(2px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); border-color: #000; }
+        .btn-bypass.hp-danger.active { background: var(--status-danger); color: #fff; }
+
+        /* Pilotos de Calibración */
+        .pilot-status { display: inline-flex; width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); margin-left: 8px; vertical-align: middle; transition: all 0.3s; cursor: help; }
+        .pilot-good { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
+        .pilot-warn { background-color: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+        .pilot-bad { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+        /* Botones integrados en SVG Mollier */
+        .mol-btn { transition: fill 0.2s; }
+        .mol-btn:hover { fill: var(--bg-hover); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Simulador de Presostatos y Termodinámica</h1>
+    
+    <!-- BARRA DE CONTROL SUPERIOR (Optimización UX: Reducción de Sobrecarga Cognitiva) -->
+    <div class="seccion-fallos" style="padding: 15px;">
+        <!-- Controles Principales (Siempre Visibles) -->
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 250px;">
+                <label for="listaFallos" style="margin: 0; font-weight: 800; color: var(--text-primary); font-size: 14px;">Avería:</label>
+                <select id="listaFallos" onchange="aplicarFallo()" style="flex: 1; font-size: 14px; padding: 10px;">
+                    <option value="normal">✅ Funcionamiento Normal</option>
+                    <option value="fallo_ctrl_lp">🔌 Fallo: Presostato Control LP pegado</option>
+                    <option value="fallo_ctrl_hp">🔌 Fallo: Presostato Control HP pegado</option>
+                    <option value="evap_hielo">⚠️ Fallo: Evaporador bloqueado de hielo</option>
+                    <option value="cond_sucio">🔥 Fallo: Condensador muy sucio</option>
+                    <option value="ven_roto">🔥 Fallo: Ventilador condensador averiado</option>
+                    <option value="obstruccion">🚧 Fallo: Filtro o Válvula obstruida</option>
+                    <option value="valvulas_rotas">🔧 Fallo: Compresor descompresionado</option>
+                    <option value="carga_termica">🌡️ Fallo: Alta carga térmica</option>
+                    <option value="vet_abierta">🌡️ Fallo: Bulbo VET desprendido (Abierta)</option>
+                    <option value="vet_cerrada">🧊 Fallo: Bulbo VET descargado (Cerrada)</option>
+                    <option value="humedad">💧 Fallo: Tapón de humedad en VET</option>
+                    <option value="ven_evap_roto">❄️ Fallo: Ventilador evaporador averiado</option>
+                    <option value="incondensables">☁️ Fallo: Gases incondensables (Aire)</option>
+                    <option value="aislamiento_malo">☀️ Fallo: Mal aislamiento aspiración</option>
+                    <!-- Opción oculta para fallo letal dinámico -->
+                    <option value="quemado" style="display:none;">💥 Fallo Catastrófico: Motor Quemado</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <label style="margin: 0; font-weight: 800; color: var(--text-primary);">Gas:</label>
+                <select id="refrigerante" onchange="cambiarRefrigerante()" style="width: 140px;">
+                    <option value="R134a">R-134a (HFC)</option>
+                    <option value="R404A">R-404A (HFC)</option>
+                    <option value="R410A">R-410A (HFC)</option>
+                    <option value="R32">R-32 (HFC)</option>
+                    <option value="R290">R-290 (Propano)</option>
+                    <option value="R717">R-717 (Amoníaco)</option>
+                    <option value="R744">R-744 (CO2)</option>
+                </select>
+                <button id="btnTheme" class="btn-action" onclick="toggleTheme()" title="Alternar Tema" style="padding: 0 15px; font-size: 18px;">☀️</button>
+                <button id="btnReset" class="btn-action" onclick="resetSimulation()" title="Restablecer simulación a valores de fábrica">🔄 Reiniciar</button>
+                <button id="btnPause" class="btn-action" onclick="togglePause()" title="Congelar simulación">⏸️ Pausar</button>
+                <button id="btnAppFullscreen" class="btn-action" onclick="toggleAppFullscreen()" title="Pantalla Completa (F11)" style="padding: 0 15px; font-size: 18px;">⛶</button>
+            </div>
+        </div>
+
+        <!-- Ajustes Avanzados Plegables -->
+        <details style="background: var(--bg-alt); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <summary style="padding: 10px 15px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--text-secondary);">
+                <span>⚙️ Ajustes Avanzados (Entorno Térmico y Carga de Refrigerante)</span>
+                <span class="toggle-icon">▼</span>
+            </summary>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; padding: 15px; border-top: 1px solid var(--border-subtle); background: var(--bg-surface); border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md);">
+                <!-- MÓDULO DE ENTORNO Y TEMPERATURAS FÍSICAS -->
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1.5; min-width: 380px; background: rgba(16, 185, 129, 0.05); padding: 5px 15px; border-radius: var(--radius-md); border: 1px solid rgba(16, 185, 129, 0.2);">
+                    <label for="escenarioCamara" style="margin: 0; font-weight: 800; color: var(--status-success); white-space: nowrap;">Entorno:</label>
+                    <select id="escenarioCamara" onchange="cambiarEscenario()" style="flex: 1; border-color: rgba(16, 185, 129, 0.3);">
+                        <option value="conservacion">Conservación (+4°C)</option>
+                        <option value="congelacion">Congelación (-20°C)</option>
+                        <option value="climatizacion">Climatización (+22°C)</option>
+                        <option value="custom">Manual...</option>
+                    </select>
+                    <div style="display: flex; align-items: center; gap: 4px;" title="Temperatura Interior (Cámara)">
+                        <span style="font-size: 11px; font-weight:bold; color: var(--text-muted);">T.Int:</span>
+                        <input type="number" id="numTempCamara" class="editable-val" style="width: 40px; font-size: 13px; margin: 0; text-align: center; color: var(--status-info);" value="4" onchange="cambiarTemps()">
+                        <span style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">°C</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;" title="Temperatura Exterior (Ambiente)">
+                        <span style="font-size: 11px; font-weight:bold; color: var(--text-muted); margin-left: 5px;">T.Ext:</span>
+                        <input type="number" id="numTempAmbiente" class="editable-val" style="width: 40px; font-size: 13px; margin: 0; text-align: center; color: var(--status-danger);" value="30" onchange="cambiarTemps()">
+                        <span style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">°C</span>
+                    </div>
+                </div>
+
+                <!-- SLIDER DE CARGA DE GAS -->
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; background: rgba(59, 130, 246, 0.05); padding: 5px 15px; border-radius: var(--radius-md); border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <label for="sliderCarga" style="margin: 0; font-weight: 800; color: var(--status-info); white-space: nowrap;">Carga Gas:</label>
+                    <input type="range" id="sliderCarga" min="0" max="200" value="100" style="flex: 1; cursor: pointer;" oninput="cambiarCarga()">
+                    <div style="display: flex; align-items: center; gap: 2px;">
+                        <input type="number" id="numCarga" class="editable-val" style="width: 45px; font-size: 14px; margin: 0; text-align: right;" min="0" max="200" value="100" onchange="cambiarCargaDesdeInput()">
+                        <span style="font-family: var(--font-mono); font-size: 14px; font-weight: 800; color: var(--text-secondary);">%</span>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </div>
+    
+    <div id="explicacionFallo" class="alerta-fallo" style="margin: -10px 0 20px 0;"></div>
+
+    <!-- BARRA DINÁMICA DE ESTADO -->
+    <div class="seccion-fallos" style="margin-top: 0; margin-bottom: 15px; padding: 15px 20px 5px 20px;">
+        <span class="seccion-titulo" style="font-size: 15px; margin-bottom: 0;">Rango de Operación del Sistema (Automático)</span>
+        <div id="pressure-bar-container" class="pressure-bar-container">
+            <!-- Etiquetas Flotantes de Calibración Dinámicas -->
+            <div id="cal-lp-saf" class="cal-marker saf" title="Corte de Seguridad LP"><div class="cal-line"></div><div class="cal-lbl"></div></div>
+            <div id="cal-hp-saf" class="cal-marker saf" title="Corte de Seguridad HP"><div class="cal-line"></div><div class="cal-lbl"></div></div>
+            
+            <div id="cal-lp-out" class="cal-marker color-lp-out"><div class="cal-line"></div><div class="cal-lbl"></div></div>
+            <div id="cal-lp-in" class="cal-marker color-lp-in"><div class="cal-line"></div><div class="cal-lbl"></div></div>
+            <div id="cal-hp-in" class="cal-marker color-hp-in"><div class="cal-line"></div><div class="cal-lbl"></div></div>
+            <div id="cal-hp-out" class="cal-marker color-hp-out"><div class="cal-line"></div><div class="cal-lbl"></div></div>
+
+            <div id="pressure-bar-bg" class="pressure-bar-bg">
+                <div id="zone-lp-danger" class="pressure-bar-zone" style="background: var(--status-danger);"></div>
+                <div id="zone-lp-warning" class="pressure-bar-zone" style="background: var(--status-warning);"></div>
+                <div id="zone-safe" class="pressure-bar-zone" style="background: var(--status-success);"></div>
+                <div id="zone-hp-warning" class="pressure-bar-zone" style="background: var(--status-warning);"></div>
+                <div id="zone-hp-danger" class="pressure-bar-zone" style="background: var(--status-danger);"></div>
+            </div>
+            <svg id="pressure-bar-scale-svg"></svg>
+            <div id="lp-bar-indicator" class="pressure-bar-indicator lp" title="Presión Baja (LP)"></div>
+            <div id="hp-bar-indicator" class="pressure-bar-indicator hp" title="Presión Alta (HP)"></div>
+            
+            <!-- Delimitadores del Ciclo Termodinámico -->
+            <div id="lp-cycle-delimeter" class="cycle-delimeter lp">
+                <div class="delimeter-line"></div>
+                <div class="delimeter-text">Tramo 4 ➔ 1<br><span style="font-size: 9px; font-weight: 600; color: var(--text-muted);">Evaporación</span></div>
+            </div>
+            <div id="hp-cycle-delimeter" class="cycle-delimeter hp">
+                <div class="delimeter-line"></div>
+                <div class="delimeter-text">Tramo 2 ➔ 3<br><span style="font-size: 9px; font-weight: 600; color: var(--text-muted);">Condensación</span></div>
+            </div>
+
+            <!-- Tramos de Transición -->
+            <div id="cycle-comp-transition" class="cycle-transition comp">
+                <div class="t-line" style="margin-right: 6px;"></div>
+                <span>Compresión (1 ➔ 2)</span>
+                <div class="t-line r" style="margin-left: 6px;"></div>
+            </div>
+            <div id="cycle-exp-transition" class="cycle-transition exp">
+                <div class="t-line l" style="margin-right: 6px;"></div>
+                <span>Expansión (3 ➔ 4)</span>
+                <div class="t-line" style="margin-left: 6px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="layout-dual">
+        <!-- ================= SEGURIDAD BAJA (LP) ================= -->
+        <div class="columna-seguridad">
+            <h3 class="color-hp">Seguridad LP <span id="pilot-saf-lp" class="pilot-status" title="Analizando calibración..."></span></h3>
+            <div class="subtitle">Corte Extremo Baja</div>
+
+            <div class="danfoss-casing safety-casing">
+                <button id="btnTestLpSaf" class="danfoss-test-btn" onclick="tripTest('lp')">TEST</button>
+                <button id="btnResetLpSaf" class="danfoss-reset-btn normal" onclick="resetSafety('lp')" disabled></button>
+                <div class="kp-faceplate single" style="position: relative; justify-content: flex-start; padding-left: 20px;">
+                    <div class="kp-section" style="width: 60%;">
+                        <div class="kp-header">CUT OUT</div>
+                        <div class="kp-scale-container">
+                            <div class="kp-labels-left" id="lbl-saf-lp"><span>-0.9</span><span>0</span><span>2</span><span>4</span><span>6</span><span>7</span></div>
+                            <div class="kp-slot" id="slotLpSaf"><div id="ptrLpSaf" class="kp-pointer"></div></div>
+                            <div class="kp-labels-right" style="justify-content: space-between;">
+                                <span style="position:absolute; top:-14px; right:0; font-size:7px; line-height:1; color:#94a3b8; text-align:right;">in<br>Hg</span>
+                                <span>28</span><span>0</span><span>40</span><span>80</span><span>100</span>
+                            </div>
+                        </div>
+                        <div class="kp-units"><span style="text-align:left">bar<br>Pe</span><span style="text-align:right; padding-right:2px;">psig</span></div>
+                    </div>
+                    <div id="reset-txt-lp" style="position: absolute; top: 8px; right: 12px; font-size: 8.5px; color: #cbd5e1; font-weight: 600; letter-spacing: 0px; writing-mode: vertical-rl; transform: rotate(180deg);">RESET DIFF.: 0.7 bar</div>
+                    <div id="model-saf-lp" style="position: absolute; bottom: 8px; right: 12px; font-size: 7.5px; font-family: var(--font-primary); font-weight: 800; color: #64748b; text-align: right; line-height: 1.2;">KP 1<br>MADE IN<br>POLAND</div>
+                </div>
+                <div style="width: 100%; display: flex; justify-content: center; padding: 0 15px; box-sizing: border-box; margin-top: 15px;">
+                    <div class="danfoss-logo" style="margin: 0; font-size: 20px;">Danfoss</div>
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top: auto; padding: 8px; margin-bottom: 0; display: flex; flex-direction: column; gap: 8px; background: rgba(15, 23, 42, 0.05); border-color: rgba(15, 23, 42, 0.2);">
+                <div style="display: flex; justify-content: center; align-items: center; border-bottom: 1px dashed var(--border-strong); padding-bottom: 8px;">
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-right: 8px;">Corte:</span>
+                    <input type="number" id="txtLpSaf" class="editable-val color-hp" value="0.5" step="0.1" style="margin:0;">
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-left: 4px;">bar</span>
+                </div>
+                <div class="digital-display" style="background: #0f172a; padding: 6px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 11px; color: #94a3b8;">Estado Relé</span>
+                        <span id="estadoSafLp" style="color: #22c55e; font-weight: bold; font-size: 12px;">CERRADO</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; padding-top: 4px; margin-top: 2px;">
+                        <span style="font-size: 10px; color: #64748b;">Bornes:</span>
+                        <span id="bornesSafLp" style="font-family: var(--font-mono); font-size: 11px; font-weight: bold; color: #22c55e;">1 ➔ 4</span>
+                        <div id="ledSafLp" class="alarm-led off"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= BAJA PRESIÓN (LP) ================= -->
+        <div class="columna-presostato">
+            <h3 class="color-lp">Control LP <span id="pilot-ctrl-lp" class="pilot-status" title="Analizando calibración..."></span></h3>
+            <select id="selModelLp" class="editable-val" onchange="cambiarModeloPresostato('lp')" style="width: 100%; max-width: 220px; margin-bottom: 10px; font-size: 11px; padding: 4px; border-color: var(--status-info); text-align: left;"></select>
+            
+            <div class="danfoss-casing">
+                <div class="kp-faceplate">
+                    <div class="kp-section">
+                        <div class="kp-header">CUT IN</div>
+                        <div class="kp-scale-container">
+                            <div class="kp-labels-left" id="lbl-aj-lp"><span>-0.2</span><span>0</span><span>2</span><span>4</span><span>6</span><span>7.5</span></div>
+                            <div class="kp-slot" id="slotLpAj"><div id="ptrLpAj" class="kp-pointer"></div></div>
+                            <div class="kp-labels-right">
+                                <span style="position:absolute; top:-14px; right:0; font-size:7px; line-height:1; color:#94a3b8; text-align:right;">in<br>Hg</span>
+                                <span>6</span><span>0</span><span>30</span><span>60</span><span>90</span><span>108</span>
+                            </div>
+                        </div>
+                        <div class="kp-units"><span style="text-align:left">bar<br>Pe</span><span style="text-align:right"><br>psig</span></div>
+                    </div>
+                    <div class="kp-section">
+                        <div class="kp-header">DIFF</div>
+                        <div class="kp-scale-container">
+                            <div class="kp-labels-left" id="lbl-dif-lp"><span>4</span><span>3</span><span>2</span><span>1</span><span>0.7</span></div>
+                            <div class="kp-slot" id="slotLpDif"><div id="ptrLpDif" class="kp-pointer"></div></div>
+                            <div class="kp-labels-right"><span>55</span><span>45</span><span>35</span><span>25</span><span>10</span></div>
+                        </div>
+                        <div class="kp-units"><span style="text-align:left; margin-top:5px;">bar</span><span style="text-align:right; margin-top:5px;">psi</span></div>
+                    </div>
+                </div>
+                <div style="width: 100%; display: flex; justify-content: space-between; padding: 0 15px; box-sizing: border-box; margin-top: 10px; align-items: flex-end;">
+                    <div id="model-aj-lp" class="danfoss-logo" style="margin: 0; font-size: 14px;">Danfoss KP 1</div>
+                    <div style="font-family: var(--font-primary); font-size: 8px; font-weight: 800; color: #64748b; line-height: 1.1; text-align: right;">MADE IN<br>POLAND</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px; gap: 10px;">
+                <div class="control-group" style="margin-bottom: 0; padding: 10px;">
+                    <label style="margin-bottom: 0; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                        <div>Ajuste: <input type="number" id="valLpAj" class="editable-val color-hp" value="3.5" step="0.1"> bar</div>
+                        <span id="tempLpAj" style="font-size: 11px; font-weight: normal; color: var(--text-muted); margin-top: 4px;">(-- °C)</span>
+                    </label>
+                </div>
+                <div class="control-group" style="margin-bottom: 0; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                    <label style="margin-bottom: 0; display: flex; align-items: center; justify-content: center;">Diff: <input type="number" id="valLpDif" class="editable-val color-lp" value="1.5" step="0.1"> bar</label>
+                </div>
+            </div>
+
+            <div class="control-group" style="background: rgba(59, 130, 246, 0.05); border-color: rgba(59, 130, 246, 0.2); padding: 8px;">
+                <div id="displayLpContainer" class="digital-display">
+                    <span id="valLpPres" class="digital-p">-- bar</span>
+                    <div class="digital-t">
+                        <span id="valLpTemp">-- °C</span>
+                        <span id="valLpState" class="state-badge">Vapor Sat.</span>
+                    </div>
+                </div>
+            </div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-muted); text-align: center;">Cut-out (Parada): <span id="txtLpCutout"></span> bar <span id="tempLpCutout" style="font-size: 12px; font-weight: normal;"></span></div>
+        </div>
+
+        <!-- ================= PANEL CENTRAL (CIRCUITO Y MOLLIER) ================= -->
+        <div class="ciclo-panel" id="panelCiclo">
+            <div class="ciclo-panel-tools">
+                <button class="btn-tool" onclick="togglePause()" id="btnPauseCiclo" title="Congelar simulación">⏸️ Pausar</button>
+                <button class="btn-tool fs-active" onclick="toggleFullscreenCiclo()" id="btnFullscreen" title="Ver circuito y diagrama P-h en pantalla completa">⛶ Expandir</button>
+            </div>
+            <span class="seccion-titulo">Ciclo Termodinámico Dinámico</span>
+            <div class="subtitle">Haz CLIC sobre las válvulas para cerrarlas/abrirlas</div>
+            
+            <div class="svg-container">
+                <svg viewBox="-20 0 800 420" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto; display: block;">
+                    <defs>
+                        <style>
+                            .svg-label { font-family: sans-serif; font-size: 15px; text-anchor: middle; fill: var(--text-primary); transition: fill 0.3s; font-weight: 800; }
+                            .svg-location { font-family: sans-serif; font-size: 12px; text-anchor: middle; fill: var(--text-muted); font-weight: bold; transition: fill 0.3s; }
+                            .svg-legend { font-family: sans-serif; font-size: 11px; text-anchor: start; fill: var(--text-secondary); transition: fill 0.3s; }
+                            .svg-num { font-family: sans-serif; font-size: 12px; text-anchor: middle; fill: #ffffff; font-weight: bold; dominant-baseline: middle; }
+                            .pipe { fill: none; stroke: var(--text-secondary); stroke-width: 3; stroke-linecap: round; transition: stroke 0.3s; }
+                            .valve-body { fill: var(--text-muted); stroke: var(--text-secondary); stroke-width: 1.5; transition: all 0.3s; }
+                            .valve-lever { fill: #f59e0b; stroke: #b45309; stroke-width: 1; }
+                            .handle-group { transform-origin: 0px 0px; transition: transform 0.4s ease; }
+                            .valve-instance.open .handle-group { transform: rotate(90deg); }
+                            .valve-instance.closed .handle-group { transform: rotate(0deg); }
+                        </style>
+                        <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)" />
+                        </marker>
+                        <clipPath id="mollierClip">
+                            <rect x="0" y="32" width="320" height="308" rx="0"/>
+                        </clipPath>
+                    </defs>
+
+                    <!-- LADO IZQUIERDO: CIRCUITO -->
+                    <path id="refrigerantPath" class="pipe" d="M 349 180 V 100 H 125 V 320 H 349 V 260"/>
+                    <g id="particleContainer"></g>
+
+                    <rect x="150" y="300" width="150" height="40" rx="5" fill="var(--svg-evap)" stroke="var(--text-secondary)" stroke-width="2" style="transition: all 0.3s;"/>
+                    <text x="225" y="318" class="svg-label">Evaporador</text>
+                    <text x="225" y="333" class="svg-location">Unidad Interior</text>
+                    <text id="svgTextCam" x="225" y="355" class="svg-legend" style="text-anchor: middle; font-weight: bold; fill: var(--status-info);">T. Int: -- °C | ΔT: -- K</text>
+                    
+                    <rect x="324" y="180" width="50" height="80" fill="var(--svg-comp)" stroke="var(--text-secondary)" stroke-width="2" style="transition: all 0.3s;"/>
+                    <line x1="374" y1="180" x2="389" y2="180" stroke="var(--text-secondary)" stroke-width="2" style="transition: stroke 0.3s;"/>
+                    <line x1="374" y1="260" x2="389" y2="260" stroke="var(--text-secondary)" stroke-width="2" style="transition: stroke 0.3s;"/>
+                    <g id="pistonAssembly">
+                        <rect x="366.5" y="180" width="15" height="80" fill="var(--text-muted)" stroke="var(--text-secondary)" stroke-width="2" style="transition: all 0.3s;"/>
+                        <line x1="381.5" y1="220" x2="421.5" y2="220" stroke="var(--text-secondary)" stroke-width="2" style="transition: stroke 0.3s;"/>
+                    </g>
+                    <text x="235" y="225" class="svg-label" id="svgCompText">Compresor</text>
+
+                    <text x="45" y="210" class="svg-label" text-anchor="middle">Válvula de</text>
+                    <text x="45" y="225" class="svg-label" text-anchor="middle">Expansión</text>
+                    <polygon points="105,190 145,190 125,220 Z" fill="#60a5fa" stroke="var(--text-secondary)" stroke-width="2" style="transition: stroke 0.3s;"/>
+                    <polygon points="105,250 145,250 125,220 Z" fill="#60a5fa" stroke="var(--text-secondary)" stroke-width="2" style="transition: stroke 0.3s;"/>
+
+                    <text id="svgTextAmb" x="225" y="70" class="svg-legend" style="text-anchor: middle; font-weight: bold; fill: var(--status-danger);">T. Ext: -- °C | ΔT: -- K</text>
+                    <rect x="150" y="80" width="150" height="40" rx="5" fill="var(--svg-cond)" stroke="var(--text-secondary)" stroke-width="2" style="transition: all 0.3s;"/>
+                    <text x="225" y="98" class="svg-label" id="svgCondLabel">Condensador</text>
+                    <text x="225" y="113" class="svg-location">Unidad Exterior</text>
+
+                    <circle cx="375" cy="120" r="8" fill="#334155"/><text x="375" y="120" class="svg-num">2</text>
+                    <circle cx="100" cy="130" r="8" fill="#334155"/><text x="100" y="130" class="svg-num">3</text>
+                    
+                    <!-- Etiqueta Línea de líquido -->
+                    <text x="115" y="148" font-family="sans-serif" font-size="12" font-weight="bold" fill="#3b82f6" text-anchor="end">Línea de líquido</text>
+
+                    <circle cx="100" cy="300" r="8" fill="#334155"/><text x="100" y="300" class="svg-num">4</text>
+                    <circle cx="375" cy="300" r="8" fill="#334155"/><text x="375" y="300" class="svg-num">1</text>
+
+                    <!-- Etiquetas de Tubería Multilínea -->
+                    <rect id="rectLineLiq" x="-15" y="90" width="115" height="30" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="1"/>
+                    <text font-family="sans-serif" font-size="10" font-weight="bold" fill="#3b82f6" text-anchor="middle">
+                        <tspan id="svgLineLiq_P" x="42.5" y="102">-- bar</tspan>
+                        <tspan id="svgLineLiq_SC" x="42.5" y="114">SC: --</tspan>
+                    </text>
+
+                    <rect id="rectLineSuc" x="-15" y="260" width="115" height="30" rx="4" fill="#1e293b" stroke="#94a3b8" stroke-width="1"/>
+                    <text font-family="sans-serif" font-size="10" font-weight="bold" fill="#94a3b8" text-anchor="middle">
+                        <tspan id="svgLineSuc_P" x="42.5" y="272">-- bar</tspan>
+                        <tspan id="svgLineSuc_SH" x="42.5" y="284">SH: --</tspan>
+                    </text>
+
+                    <g transform="translate(10, 420)">
+                        <circle cx="10" cy="10" r="5" fill="#94a3b8"/><text x="25" y="14" class="svg-legend">1. Succión (Gas, Baja Presión)</text>
+                        <circle cx="10" cy="30" r="5" fill="#ef4444"/><text x="25" y="34" class="svg-legend">2. Descarga (Gas, Alta Presión)</text>
+                        <circle cx="10" cy="50" r="5" fill="#3b82f6"/><text x="25" y="54" class="svg-legend">3. Líquido (Líquido, Alta Presión)</text>
+                        <circle cx="10" cy="70" r="5" fill="#f97316"/><text x="25" y="74" class="svg-legend">4. Expansión (Mezcla L/V)</text>
+                    </g>
+
+                    <g id="valveDischarge" class="valve-instance open" transform="translate(349, 140)">
+                        <text x="18" y="4" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ef4444" text-anchor="start">Descarga</text>
+                        <circle class="valve-body" cx="0" cy="0" r="10"></circle>
+                        <g class="handle-group"><rect class="valve-lever" x="-15" y="-2.5" width="30" height="5" rx="2.5"></rect><circle cx="0" cy="0" r="3" fill="#333"></circle></g>
+                    </g>
+                    <g id="valveLiquid" class="valve-instance open" transform="translate(125, 160)">
+                        <text x="-18" y="4" font-family="sans-serif" font-size="11" font-weight="bold" fill="#3b82f6" text-anchor="end">Solenoide</text>
+                        <circle class="valve-body" cx="0" cy="0" r="10"></circle>
+                        <g class="handle-group"><rect class="valve-lever" x="-15" y="-2.5" width="30" height="5" rx="2.5"></rect><circle cx="0" cy="0" r="3" fill="#333"></circle></g>
+                    </g>
+                    <g id="valveSuction" class="valve-instance open" transform="translate(349, 300)">
+                        <text x="40" y="4" font-family="sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="start">Aspiración</text>
+                        <circle class="valve-body" cx="0" cy="0" r="10"></circle>
+                        <g class="handle-group"><rect class="valve-lever" x="-15" y="-2.5" width="30" height="5" rx="2.5"></rect><circle cx="0" cy="0" r="3" fill="#333"></circle></g>
+                    </g>
+
+                    <!-- Paneles Digitales -->
+                    <g transform="translate(350, 20)">
+                        <rect id="svgHpRect" x="0" y="0" width="95" height="40" rx="4" fill="#1e293b" stroke="#cbd5e1" stroke-width="1" style="transition: fill 0.3s ease;"/>
+                        <text x="47.5" y="17" font-family="'Roboto Condensed', sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle" id="svgHpVal">HP: --</text>
+                        <text x="47.5" y="32" font-family="sans-serif" font-size="9" fill="#cbd5e1" text-anchor="middle" id="svgHpSet" style="transition: fill 0.3s ease;">Out: -- | In: --</text>
+                    </g>
+
+                    <g transform="translate(350, 340)">
+                        <rect id="svgLpRect" x="0" y="0" width="95" height="40" rx="4" fill="#1e293b" stroke="#cbd5e1" stroke-width="1" style="transition: fill 0.3s ease;"/>
+                        <text x="47.5" y="17" font-family="'Roboto Condensed', sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle" id="svgLpVal">LP: --</text>
+                        <text x="47.5" y="32" font-family="sans-serif" font-size="9" fill="#cbd5e1" text-anchor="middle" id="svgLpSet" style="transition: fill 0.3s ease;">In: -- | Out: --</text>
+                    </g>
+
+                    <!-- LADO DERECHO: DIAGRAMA DE MOLLIER -->
+                    <g id="mollierDiagram" transform="translate(460, 60)">
+                        <rect width="320" height="340" fill="var(--bg-alt)" stroke="var(--border-strong)" stroke-width="1" rx="4"/>
+                        <text x="160" y="20" class="svg-label">Diagrama P-h (Mollier)</text>
+                        <!-- Ayuda visual UX para descubrir la interactividad -->
+                        <text x="160" y="38" font-family="sans-serif" font-size="9" fill="var(--text-muted)" text-anchor="middle" opacity="0.8" style="pointer-events: none;">🖱️ Arrastrar para mover | 📜 Rueda para Zoom</text>
+                        
+                        <!-- Botones UI del Diagrama -->
+                        <g id="molZoomUI" transform="translate(230, 6)" stroke="var(--border-strong)" stroke-width="1">
+                            <rect x="0" y="0" width="80" height="22" rx="4" fill="var(--bg-surface)" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));" />
+                            <g style="cursor:pointer;" onclick="molZoomClick(-1)"><rect x="0" y="0" width="26" height="22" rx="4" fill="transparent" class="mol-btn"/><text x="13" y="15" font-size="12" text-anchor="middle" fill="var(--text-primary)" stroke="none">-</text></g>
+                            <line x1="26" y1="0" x2="26" y2="22" stroke="var(--border-strong)" stroke-width="1"/>
+                            <g style="cursor:pointer;" onclick="molReset()"><rect x="26" y="0" width="28" height="22" fill="transparent" class="mol-btn"/><text x="40" y="15" font-size="10" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="var(--text-primary)" stroke="none">RST</text></g>
+                            <line x1="54" y1="0" x2="54" y2="22" stroke="var(--border-strong)" stroke-width="1"/>
+                            <g style="cursor:pointer;" onclick="molZoomClick(1)"><rect x="54" y="0" width="26" height="22" rx="4" fill="transparent" class="mol-btn"/><text x="67" y="15" font-size="12" text-anchor="middle" fill="var(--text-primary)" stroke="none">+</text></g>
+                        </g>
+
+                        <!-- Contenedor Enmascarado Transformable -->
+                        <g clip-path="url(#mollierClip)">
+                            <g id="mollierTransform" transform="translate(0, 0) scale(1)">
+                                <!-- Ejes y Etiquetas Fijas -->
+                                <line x1="20" y1="300" x2="310" y2="300" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arrow)"/>
+                                <line x1="20" y1="300" x2="20" y2="30" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arrow)"/>
+                                
+                                <text x="160" y="330" font-family="sans-serif" font-size="10" fill="var(--text-muted)" text-anchor="middle" font-weight="bold">Entalpía (h) [kJ/kg]</text>
+                                <text x="-160" y="10" transform="rotate(-90)" font-family="sans-serif" font-size="10" fill="var(--text-muted)" text-anchor="middle" font-weight="bold">Presión log(P) [bar]</text>
+
+                                <!-- Líneas de Proyección de Entalpías -->
+                                <line id="molDrop3" x1="0" y1="0" x2="0" y2="300" stroke="var(--text-muted)" stroke-dasharray="2 2" stroke-width="1" opacity="0.6"/>
+                                <line id="molDrop1" x1="0" y1="0" x2="0" y2="300" stroke="var(--text-muted)" stroke-dasharray="2 2" stroke-width="1" opacity="0.6"/>
+                                <line id="molDrop2" x1="0" y1="0" x2="0" y2="300" stroke="var(--text-muted)" stroke-dasharray="2 2" stroke-width="1" opacity="0.6"/>
+
+                                <!-- Textos de Valores de Entalpía -->
+                                <text id="molValH3" x="0" y="312" font-family="var(--font-mono)" font-size="9" fill="var(--text-primary)" text-anchor="middle" font-weight="bold"></text>
+                                <text id="molValH1" x="0" y="312" font-family="var(--font-mono)" font-size="9" fill="var(--text-primary)" text-anchor="middle" font-weight="bold"></text>
+                                <text id="molValH2" x="0" y="324" font-family="var(--font-mono)" font-size="9" fill="var(--text-primary)" text-anchor="middle" font-weight="bold"></text>
+
+                                <!-- Campana de Saturación Blindada -->
+                                <path id="molBell" d="" fill="rgba(148, 163, 184, 0.1)" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                                
+                                <!-- Puntos de Saturación (Te y Tc) -->
+                                <circle id="molN_sat_liq" cx="0" cy="0" r="3" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+                                <circle id="molN_sat_vap" cx="0" cy="0" r="3" fill="#ffffff" stroke="#ef4444" stroke-width="1.5"/>
+                                
+                                <!-- Acotaciones de SC y SH -->
+                                <path id="molDimSC" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+                                <text id="molTextSC_val" font-family="var(--font-mono)" font-size="9" fill="#3b82f6" text-anchor="middle" font-weight="bold">SC: --</text>
+                                <path id="molDimSH" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+                                <text id="molTextSH_val" font-family="var(--font-mono)" font-size="9" fill="#f59e0b" text-anchor="middle" font-weight="bold">SH: --</text>
+
+                                <!-- Trapecio del Ciclo -->
+                                <polygon id="molCycle" points="" fill="rgba(245, 158, 11, 0.15)" stroke="var(--accent-base)" stroke-width="2"/>
+                                
+                                <!-- Nodos y Textos -->
+                                <circle id="molN1" cx="0" cy="0" r="4" fill="#94a3b8"/>
+                                <text id="molT1" font-family="var(--font-mono)" font-size="12" font-weight="bold" fill="var(--text-primary)">1</text>
+                                
+                                <circle id="molN2" cx="0" cy="0" r="4" fill="#ef4444"/>
+                                <text id="molT2" font-family="var(--font-mono)" font-size="12" font-weight="bold" fill="var(--text-primary)">2</text>
+                                
+                                <circle id="molN3" cx="0" cy="0" r="4" fill="#3b82f6"/>
+                                <text id="molT3" font-family="var(--font-mono)" font-size="12" font-weight="bold" fill="var(--text-primary)">3</text>
+                                
+                                <circle id="molN4" cx="0" cy="0" r="4" fill="#f97316"/>
+                                <text id="molT4" font-family="var(--font-mono)" font-size="12" font-weight="bold" fill="var(--text-primary)">4</text>
+                                
+                                <text id="molTextHp" x="25" y="0" fill="var(--status-danger)" font-size="10" font-family="sans-serif" font-weight="bold">HP: --</text>
+                                <text id="molTextLp" x="25" y="0" fill="var(--status-info)" font-size="10" font-family="sans-serif" font-weight="bold">LP: --</text>
+
+                                <text id="molTempHp" x="160" y="0" fill="var(--status-danger)" font-size="10" font-family="sans-serif" font-weight="bold" text-anchor="middle">Tc: --</text>
+                                <text id="molTempLp" x="160" y="0" fill="var(--status-info)" font-size="10" font-family="sans-serif" font-weight="bold" text-anchor="middle">Te: --</text>
+                                
+                                <!-- Isobaras -->
+                                <line id="molLineHp" x1="20" y1="0" x2="300" y2="0" stroke="var(--status-danger)" stroke-width="1" stroke-dasharray="2 2" opacity="0.5"/>
+                                <line id="molLineLp" x1="20" y1="0" x2="300" y2="0" stroke="var(--status-info)" stroke-width="1" stroke-dasharray="2 2" opacity="0.5"/>
+
+                                <!-- Líneas de T. Ambiente y T. Cámara -->
+                                <line id="molLineText" x1="20" y1="0" x2="300" y2="0" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.4"/>
+                                <text id="molTextText" x="295" y="0" fill="#ef4444" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="end">T.Ext: --</text>
+                                
+                                <line id="molLineTint" x1="20" y1="0" x2="300" y2="0" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.4"/>
+                                <text id="molTextTint" x="295" y="0" fill="#3b82f6" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="end">T.Int: --</text>
+                            </g>
+                        </g>
+
+                        <!-- Capa Transparente de Control de Eventos -->
+                        <rect id="mollierOverlay" x="0" y="32" width="320" height="308" fill="transparent" style="cursor: grab;"/>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- ESTADO GLOBAL Y LEYENDA -->
+            <div class="status-container">
+                <div style="display: flex; flex-direction: column; justify-content: center; gap: 4px; font-size: 11px; font-family: var(--font-secondary); font-weight: 600; color: var(--text-secondary); background: var(--bg-alt); padding: 8px 15px; border-radius: var(--radius-lg); border: 1px solid var(--border-default); flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);"></div> 1. Succión (Gas, Baja)</div>
+                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);"></div> 2. Descarga (Alta Presión)</div>
+                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);"></div> 3. Líquido (Subenfriado)</div>
+                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #f97316; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);"></div> 4. Expansión (Mezcla)</div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 6px; justify-content: stretch; flex: 0.5;">
+                    <button id="btnBypassLp" class="btn-bypass" style="flex: 1;" title="Mantener pulsado para puentear presostato de Baja (Pump-Down)">🔌 Forzar LP</button>
+                    <button id="btnBypassHp" class="btn-bypass hp-danger" style="flex: 1;" title="Mantener pulsado para puentear presostato de Alta (¡Peligro!)">🔌 Forzar HP</button>
+                </div>
+
+                <div id="estadoGlobal" class="status-panel on" style="margin: 0; flex: 1.2; justify-content: center; padding: 10px 15px;">
+                    <div id="estadoTextoPrincipal" style="font-size: 15px;">⚡ COMPRESOR FUNCIONANDO</div>
+                    <div id="motivoCorte" class="motivo-corte" style="font-size: 11px;">Presiones dentro de los límites de seguridad.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ALTA PRESIÓN (HP) ================= -->
+        <div class="columna-presostato">
+            <h3 class="color-hp">Control HP <span id="pilot-ctrl-hp" class="pilot-status" title="Analizando calibración..."></span></h3>
+            <select id="selModelHp" class="editable-val" onchange="cambiarModeloPresostato('hp')" style="width: 100%; max-width: 220px; margin-bottom: 10px; font-size: 11px; padding: 4px; border-color: var(--status-danger); text-align: left;"></select>
+            
+            <div class="danfoss-casing">
+                <div class="kp-faceplate">
+                    <div class="kp-section">
+                        <div class="kp-header">RANGE</div>
+                        <div class="kp-scale-container">
+                            <div class="kp-labels-left" id="lbl-aj-hp"><span>8</span><span>14</span><span>20</span><span>26</span><span>32</span></div>
+                            <div class="kp-slot" id="slotHpAj"><div id="ptrHpAj" class="kp-pointer"></div></div>
+                            <div class="kp-labels-right"><span>100</span><span>150</span><span>250</span><span>350</span><span>465</span></div>
+                        </div>
+                        <div class="kp-units"><span style="text-align:left">bar<br>Pe</span><span style="text-align:right"><br>psig</span></div>
+                    </div>
+                    <div class="kp-section">
+                        <div class="kp-header">DIFF</div>
+                        <div class="kp-scale-container">
+                            <div class="kp-labels-left" id="lbl-dif-hp"><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span></div>
+                            <div class="kp-slot" id="slotHpDif"><div id="ptrHpDif" class="kp-pointer"></div></div>
+                            <div class="kp-labels-right"><span>85</span><span>70</span><span>55</span><span>40</span><span>25</span></div>
+                        </div>
+                        <div class="kp-units"><span style="text-align:left; margin-top:5px;">bar</span><span style="text-align:right; margin-top:5px;">psi</span></div>
+                    </div>
+                </div>
+                <div style="width: 100%; display: flex; justify-content: space-between; padding: 0 15px; box-sizing: border-box; margin-top: 10px; align-items: flex-end;">
+                    <div id="model-aj-hp" class="danfoss-logo" style="margin: 0; font-size: 14px;">Danfoss KP 5</div>
+                    <div style="font-family: var(--font-primary); font-size: 8px; font-weight: 800; color: #64748b; line-height: 1.1; text-align: right;">MADE IN<br>POLAND</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px; gap: 10px;">
+                <div class="control-group" style="margin-bottom: 0; padding: 10px;">
+                    <label style="margin-bottom: 0; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                        <div>Ajuste: <input type="number" id="valHpAj" class="editable-val color-hp" value="20.0" step="0.5"> bar</div>
+                        <span id="tempHpAj" style="font-size: 11px; font-weight: normal; color: var(--text-muted); margin-top: 4px;">(-- °C)</span>
+                    </label>
+                </div>
+                <div class="control-group" style="margin-bottom: 0; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                    <label style="margin-bottom: 0; display: flex; align-items: center; justify-content: center;">Diff: <input type="number" id="valHpDif" class="editable-val color-lp" value="2.0" step="0.2"> bar</label>
+                </div>
+            </div>
+
+            <div class="control-group" style="background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.2); padding: 8px;">
+                <div id="displayHpContainer" class="digital-display hp">
+                    <span id="valHpPres" class="digital-p hp">-- bar</span>
+                    <div class="digital-t">
+                        <span id="valHpTemp">-- °C</span>
+                        <span id="valHpState" class="state-badge">Líq. Sat.</span>
+                    </div>
+                </div>
+            </div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-muted); text-align: center;">Cut-in (Arranque): <span id="txtHpCutin"></span> bar <span id="tempHpCutin" style="font-size: 12px; font-weight: normal;"></span></div>
+        </div>
+
+        <!-- ================= SEGURIDAD ALTA (HP) ================= -->
+        <div class="columna-seguridad">
+            <h3 class="color-hp">Seguridad HP <span id="pilot-saf-hp" class="pilot-status" title="Analizando calibración..."></span></h3>
+            <div class="subtitle">Corte Extremo Alta</div>
+
+            <div class="danfoss-casing safety-casing">
+                <button id="btnTestHpSaf" class="danfoss-test-btn" onclick="tripTest('hp')">TEST</button>
+                <button id="btnResetHpSaf" class="danfoss-reset-btn normal" onclick="resetSafety('hp')" disabled></button>
+                <div class="kp-faceplate single" style="position: relative; justify-content: flex-start; padding-left: 20px;">
+                    <div class="kp-section" style="width: 60%;">
+                        <div class="kp-header">CUT OUT</div>
+                        <div class="kp-scale-container">
+                            <div class="kp-labels-left" id="lbl-saf-hp"><span>8</span><span>14</span><span>20</span><span>26</span><span>32</span></div>
+                            <div class="kp-slot" id="slotHpSaf"><div id="ptrHpSaf" class="kp-pointer"></div></div>
+                            <div class="kp-labels-right"><span>100</span><span>150</span><span>250</span><span>350</span><span>465</span></div>
+                        </div>
+                        <div class="kp-units"><span style="text-align:left">bar<br>Pe</span><span style="text-align:right; padding-right:2px;">psig</span></div>
+                    </div>
+                    <div id="reset-txt-hp" style="position: absolute; top: 8px; right: 12px; font-size: 8.5px; color: #cbd5e1; font-weight: 600; letter-spacing: 0px; writing-mode: vertical-rl; transform: rotate(180deg);">RESET DIFF.: 3.0 bar</div>
+                    <div id="model-saf-hp" style="position: absolute; bottom: 8px; right: 12px; font-size: 7.5px; font-family: var(--font-primary); font-weight: 800; color: #64748b; text-align: right; line-height: 1.2;">KP 5<br>MADE IN<br>POLAND</div>
+                </div>
+                <div style="width: 100%; display: flex; justify-content: center; padding: 0 15px; box-sizing: border-box; margin-top: 15px;">
+                    <div class="danfoss-logo" style="margin: 0; font-size: 20px;">Danfoss</div>
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top: auto; padding: 8px; margin-bottom: 0; display: flex; flex-direction: column; gap: 8px; background: rgba(15, 23, 42, 0.05); border-color: rgba(15, 23, 42, 0.2);">
+                <div style="display: flex; justify-content: center; align-items: center; border-bottom: 1px dashed var(--border-strong); padding-bottom: 8px;">
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-right: 8px;">Corte:</span>
+                    <input type="number" id="txtHpSaf" class="editable-val color-hp" value="25.0" step="0.5" style="margin:0;">
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-left: 4px;">bar</span>
+                </div>
+                <div class="digital-display" style="background: #0f172a; padding: 6px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 11px; color: #94a3b8;">Estado Relé</span>
+                        <span id="estadoSafHp" style="color: #22c55e; font-weight: bold; font-size: 12px;">CERRADO</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; padding-top: 4px; margin-top: 2px;">
+                        <span style="font-size: 10px; color: #64748b;">Bornes:</span>
+                        <span id="bornesSafHp" style="font-family: var(--font-mono); font-size: 11px; font-weight: bold; color: #22c55e;">1 ➔ 4</span>
+                        <div id="ledSafHp" class="alarm-led off"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- CONCEPTOS TÉCNICOS Y DIDÁCTICOS -->
+    <div class="seccion-fallos" style="margin-top: 25px; padding: 0;">
+        <details style="padding: 20px; border-bottom: 1px solid var(--border-default);">
+            <summary class="seccion-titulo" style="text-align: left; margin: 0; display: flex; justify-content: space-between; align-items: center;">
+                <span>🌡️ Propiedades Termodinámicas del Refrigerante en Vivo</span>
+                <span class="toggle-icon">▼</span>
+            </summary>
+            
+            <div style="margin-top: 15px; font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
+                <p>El refrigerante es el "vehículo" encargado de transportar el calor desde el interior de la cámara hacia la calle. Para lograrlo, el sistema altera continuamente sus propiedades termodinámicas. A continuación, puedes ver los valores estimados de <strong>Entalpía (h)</strong> en cada punto del circuito según el estado actual:</p>
+                
+                <div class="concept-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                    <div class="concept-card" style="border-left: 4px solid #94a3b8;">
+                        <div class="concept-title" style="font-size: 13px; color: #94a3b8;">Punto 1: Aspiración</div>
+                        <div style="font-size: 18px; font-weight: 800; font-family: var(--font-mono);" id="term1_h">h<sub>1</sub> = -- <span style="font-size:13px; font-weight:normal; color: var(--text-muted);">kJ/kg</span></div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Gas sobrecalentado de baja presión listo para ser comprimido.</div>
+                    </div>
+                    <div class="concept-card" style="border-left: 4px solid #ef4444;">
+                        <div class="concept-title" style="font-size: 13px; color: #ef4444;">Punto 2: Descarga</div>
+                        <div style="font-size: 18px; font-weight: 800; font-family: var(--font-mono);" id="term2_h">h<sub>2</sub> = -- <span style="font-size:13px; font-weight:normal; color: var(--text-muted);">kJ/kg</span></div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Gas a máxima presión y alta temperatura tras recibir el trabajo mecánico.</div>
+                    </div>
+                    <div class="concept-card" style="border-left: 4px solid #3b82f6;">
+                        <div class="concept-title" style="font-size: 13px; color: #3b82f6;">Punto 3: Líquido</div>
+                        <div style="font-size: 18px; font-weight: 800; font-family: var(--font-mono);" id="term3_h">h<sub>3</sub> = -- <span style="font-size:13px; font-weight:normal; color: var(--text-muted);">kJ/kg</span></div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Líquido subenfriado tras ceder el calor latente al ambiente exterior.</div>
+                    </div>
+                    <div class="concept-card" style="border-left: 4px solid #f97316;">
+                        <div class="concept-title" style="font-size: 13px; color: #f97316;">Punto 4: Expansión</div>
+                        <div style="font-size: 18px; font-weight: 800; font-family: var(--font-mono);" id="term4_h">h<sub>4</sub> = -- <span style="font-size:13px; font-weight:normal; color: var(--text-muted);">kJ/kg</span></div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Mezcla líquido/vapor de baja presión tras caer de forma isentálpica.</div>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 15px; margin-bottom: 10px; color: var(--text-primary); font-family: var(--font-primary); font-size: 15px;">⚖️ Balances de Energía (Específicos)</h4>
+                <div class="concept-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                    <div class="concept-card" style="border-top: 3px solid #3b82f6;">
+                        <div class="concept-title" style="font-size: 13px;">Efecto Frigorífico (q<sub>e</sub>)</div>
+                        <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #38bdf8;" id="calc_qe">-- kJ/kg</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Calor absorbido (h<sub>1</sub> - h<sub>4</sub>)<br><span id="form_qe" style="font-family: var(--font-mono); color: #60a5fa;">= -- - --</span></div>
+                    </div>
+                    <div class="concept-card" style="border-top: 3px solid #f59e0b;">
+                        <div class="concept-title" style="font-size: 13px;">Trabajo Compresión (w<sub>c</sub>)</div>
+                        <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #fbbf24;" id="calc_wc">-- kJ/kg</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Energía aportada (h<sub>2</sub> - h<sub>1</sub>)<br><span id="form_wc" style="font-family: var(--font-mono); color: #fcd34d;">= -- - --</span></div>
+                    </div>
+                    <div class="concept-card" style="border-top: 3px solid #ef4444;">
+                        <div class="concept-title" style="font-size: 13px;">Calor Condensación (q<sub>c</sub>)</div>
+                        <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #f87171;" id="calc_qc">-- kJ/kg</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Calor rechazado (h<sub>2</sub> - h<sub>3</sub>)<br><span id="form_qc" style="font-family: var(--font-mono); color: #fca5a5;">= -- - --</span></div>
+                    </div>
+                    <div class="concept-card" style="border-top: 3px solid #10b981;">
+                        <div class="concept-title" style="font-size: 13px;">Rendimiento (COP)</div>
+                        <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #34d399;" id="calc_cop">--</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Eficiencia del ciclo (q<sub>e</sub> / w<sub>c</sub>)<br><span id="form_cop" style="font-family: var(--font-mono); color: #6ee7b7;">= -- / --</span></div>
+                    </div>
+                    <div class="concept-card" style="border-top: 3px solid #8b5cf6;">
+                        <div class="concept-title" style="font-size: 13px;">Relación Compresión (RC)</div>
+                        <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #a78bfa;" id="calc_rc">--</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Absoluta (HP+1 / LP+1)<br><span id="form_rc" style="font-family: var(--font-mono); color: #c4b5fd;">= -- / --</span></div>
+                    </div>
+                    <div class="concept-card" style="border-top: 3px solid #ec4899;">
+                        <div class="concept-title" style="font-size: 13px;">Rend. Volumétrico (η<sub>v</sub>)</div>
+                        <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #f472b6;" id="calc_nv">-- %</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Pistón con 5% esp. muerto<br><span id="form_nv" style="font-family: var(--font-mono); color: #fbcfe8;">= 100 - 5 × (RC - 1)</span></div>
+                    </div>
+                </div>
+
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="concept-title"><span style="color: #fbbf24">📊</span> Entalpías Específicas Reales</div>
+                        <div class="concept-desc">El simulador ahora calcula la escala de entalpía (h) específica de cada gas. Notarás que el <b>Amoníaco (R-717)</b> maneja entalpías superiores a 1400 kJ/kg, justificando por qué es el rey indiscutible de la refrigeración industrial moviendo mucha energía con caudales másicos mínimos.</div>
+                    </div>
+                    <div class="concept-card">
+                        <div class="concept-title"><span style="color: #3b82f6">🔀</span> Deslizamiento (Glide) Zeotrópico</div>
+                        <div class="concept-desc">Si seleccionas una mezcla como el <b>R-404A</b>, verás que la temperatura de saturación muestra dos valores (B: Burbuja y R: Rocío). Esto se debe a que la mezcla no hierve a temperatura constante, sino que su temperatura se "desliza" durante el cambio de fase isobárico.</div>
+                    </div>
+                    <div class="concept-card">
+                        <div class="concept-title"><span style="color: #ef4444">🚀</span> Ciclo Transcrítico (CO2 / R-744)</div>
+                        <div class="concept-desc">Cuando el R-744 supera los 73.8 bar (Punto Crítico), el condensador se convierte en un <b>Enfriador de Gas (Gas Cooler)</b>. El refrigerante ya no se licúa dentro de la campana (desaparece el calor latente), sino que se enfría como fluido supercrítico por encima del domo de Andrews.</div>
+                    </div>
+                    <div class="concept-card">
+                        <div class="concept-title"><span style="color: #10b981">⚡</span> Compresión Isentrópica Dinámica</div>
+                        <div class="concept-desc">En el diagrama de Mollier, la línea (1 ➔ 2) ahora ajusta su pendiente según el exponente isentrópico de cada gas y el sobrecalentamiento. A mayor recalentamiento, las curvas de entropía ($S=cte$) se abren hacia la derecha, penalizando el trabajo del compresor.</div>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <!-- GUÍA TÉCNICA DE AJUSTE -->
+    <div class="seccion-fallos" style="margin-top: 15px; padding: 0;">
+        <details style="padding: 20px; border-bottom: 1px solid var(--border-default);">
+            <summary class="seccion-titulo" style="text-align: left; margin: 0; display: flex; justify-content: space-between; align-items: center;">
+                <span>📘 Guía Técnica: Ajustes, Diferenciales y Seguridad</span>
+                <span class="toggle-icon">▼</span>
+            </summary>
+            
+            <div style="margin-top: 15px; font-size: 13.5px; line-height: 1.7; color: var(--text-secondary);">
+                <p>A continuación se detalla cómo afectan los ajustes del presostato al ciclo termodinámico y cuáles son las normativas de buenas prácticas en refrigeración.</p>
+                
+                <h4 style="color: var(--text-primary); border-bottom: 1px solid var(--border-default); padding-bottom: 5px; margin-top: 20px;">1. ¿Cómo afecta la fluctuación por un diferencial (DIFF) alto?</h4>
+                <p>Un diferencial demasiado alto significa que existe mucha distancia térmica y de presión entre el momento en el que el compresor arranca (Cut-in) y el momento en que se detiene (Cut-out).</p>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;"><b>En Baja Presión (LP):</b> Un diferencial alto provoca ciclos de trabajo excesivamente largos seguidos de paradas muy largas.
+                        <ul style="margin-top: 4px;">
+                            <li><i>Consecuencia térmica:</i> La presión de evaporación cae muchísimo, escarchando severamente el evaporador y <b>resecando el producto</b> (roba demasiada humedad). La temperatura de la cámara fluctuará bruscamente.</li>
+                            <li><i>Consecuencia mecánica:</i> El compresor sufre mayor estrés mecánico y térmico debido a estos arranques y paradas espaciados pero extremos.</li>
+                        </ul>
+                    </li>
+                    <li><b>En Alta Presión (HP):</b> Si se utiliza para controlar los ventiladores del condensador, un diferencial alto creará "montañas rusas" en la presión de descarga.
+                        <ul style="margin-top: 4px;">
+                            <li><i>Consecuencia:</i> La Válvula de Expansión Termostática (VET) necesita una presión de líquido estable. Si fluctúa, la VET empezará a "cazar" (abrir y cerrar erráticamente), desestabilizando el recalentamiento y perdiendo eficiencia (COP).</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h4 style="color: var(--text-primary); border-bottom: 1px solid var(--border-default); padding-bottom: 5px; margin-top: 20px;">2. ¿Qué valores de presiones y diferencial son los adecuados?</h4>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;"><b>Control LP (Baja):</b> El diferencial (DIFF) suele ajustarse para conseguir una variación de unos <b>2 a 4 ºC</b> en el recinto. Esto equivale generalmente a un diferencial de entre <b>0.5 bar y 1.5 bar</b> (hasta 2.5 bar en gases de alta presión).</li>
+                    <li><b>Control HP (Alta / Ventiladores):</b> El objetivo es mantener una presión de condensación que garantice líquido subenfriado sin hacer que los contactores de los ventiladores "ametrallen" (arranquen y paren cada 5 segundos). Un diferencial de <b>2.0 a 4.0 bar</b> suele ser el estándar ideal.</li>
+                </ul>
+
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px;">
+                    <div style="flex: 1; min-width: 300px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: var(--radius-md);">
+                        <h4 style="color: var(--status-danger); margin-top: 0; margin-bottom: 10px;">3. Margen de Seguridad en Baja (Saf LP)</h4>
+                        <p style="margin-bottom: 8px;">Actúa si hay pérdida de gas o si el presostato de control falla (se queda pegado).</p>
+                        <ul style="padding-left: 15px; margin: 0;">
+                            <li style="margin-bottom: 6px;"><b>Diferencia:</b> El corte de seguridad debe estar entre <b>0.5 y 1.0 bar por debajo</b> del <code>Cut-out</code> de control.</li>
+                            <li><b>Regla Crítica (El Vacío):</b> NUNCA debe permitir que el sistema entre en presión negativa. Ajustar siempre en positivo (> 0 bar). Si trabaja en vacío, aspirará aire y humedad, creando ácidos que quemarán el motor.</li>
+                        </ul>
+                    </div>
+                    <div style="flex: 1; min-width: 300px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: var(--radius-md);">
+                        <h4 style="color: var(--status-danger); margin-top: 0; margin-bottom: 10px;">4. Margen de Seguridad en Alta (Saf HP)</h4>
+                        <p style="margin-bottom: 8px;">Evita que una tubería reviente o explote el compresor por alta presión.</p>
+                        <ul style="padding-left: 15px; margin: 0;">
+                            <li style="margin-bottom: 6px;"><b>Diferencia:</b> Debe estar entre <b>3.0 y 5.0 bar por encima</b> de la presión de control máxima.</li>
+                            <li><b>Límite Normativo:</b> Nunca configurar por encima del <b>90% de la Presión Máxima de Servicio (PS)</b> indicada en la placa del componente más débil.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </div>
+
+</div>
+
+<script>
+    // =====================================================================
+    // ================= BASE DE DATOS TERMODINÁMICA P-T ===================
+    // =====================================================================
+    const RefData = {
+        'R134a': { type: 'pure', defLp: 2.0, defHp: 8.8, criticalT: 101, barMin: -1, barMax: 25, domeFactor: 1.0,
+                   hBase: 200, hScale: 1.2, isentSlope: 0.15, glide: 0,
+                   points: [{p:0.5, t:-40}, {p:1.0, t:-26}, {p:2.0, t:-10}, {p:2.9, t:0}, {p:4.1, t:10}, {p:5.7, t:20}, {p:7.7, t:30}, {p:10.1, t:40}, {p:13.1, t:50}, {p:16.8, t:60}] },
+        'R404A': { type: 'zeotropic', defLp: 4.3, defHp: 16.9, criticalT: 72, barMin: -1, barMax: 35, domeFactor: 0.75,
+                   hBase: 150, hScale: 1.1, isentSlope: 0.12, glide: 0.5,
+                   points: [{p:1.3, t:-40}, {p:2.5, t:-25}, {p:4.3, t:-10}, {p:6.0, t:0}, {p:8.2, t:10}, {p:10.9, t:20}, {p:14.3, t:30}, {p:18.4, t:40}, {p:23.4, t:50}, {p:29.4, t:60}] },
+        'R410A': { type: 'zeotropic', defLp: 5.7, defHp: 22.2, criticalT: 71, barMin: -1, barMax: 45, domeFactor: 0.85,
+                   hBase: 180, hScale: 1.3, isentSlope: 0.14, glide: 0.1,
+                   points: [{p:1.7, t:-40}, {p:3.3, t:-25}, {p:5.7, t:-10}, {p:8.0, t:0}, {p:10.8, t:10}, {p:14.4, t:20}, {p:18.8, t:30}, {p:24.2, t:40}, {p:30.7, t:50}, {p:38.4, t:60}] },
+        'R32':   { type: 'pure', defLp: 5.4, defHp: 21.0, criticalT: 78, barMin: -1, barMax: 45, domeFactor: 0.9,
+                   hBase: 250, hScale: 1.4, isentSlope: 0.18, glide: 0,
+                   points: [{p:1.7, t:-40}, {p:3.2, t:-25}, {p:5.4, t:-10}, {p:7.4, t:0}, {p:9.9, t:10}, {p:14.7, t:20}, {p:18.7, t:30}, {p:23.5, t:40}, {p:29.1, t:50}, {p:35.5, t:60}] },
+        'R290':  { type: 'pure', defLp: 3.2, defHp: 12.2, criticalT: 96, barMin: -1, barMax: 30, domeFactor: 1.05,
+                   hBase: 300, hScale: 1.8, isentSlope: 0.11, glide: 0,
+                   points: [{p:1.1, t:-40}, {p:1.9, t:-25}, {p:3.2, t:-10}, {p:4.4, t:0}, {p:5.9, t:10}, {p:9.3, t:20}, {p:12.2, t:30}, {p:15.5, t:40}, {p:19.3, t:50}, {p:23.8, t:60}] },
+        'R717':  { type: 'pure', defLp: 2.9, defHp: 13.5, criticalT: 132, barMin: -1, barMax: 30, domeFactor: 1.25,
+                   hBase: 1000, hScale: 4.5, isentSlope: 0.08, glide: 0,
+                   points: [{p:0.7, t:-40}, {p:1.5, t:-25}, {p:2.9, t:-10}, {p:4.2, t:0}, {p:6.1, t:10}, {p:8.5, t:20}, {p:11.6, t:30}, {p:15.5, t:40}, {p:20.3, t:50}, {p:26.1, t:60}] },
+        'R744':  { type: 'transcritical', defLp: 26.6, defHp: 90.0, criticalT: 31, barMin: 0, barMax: 140, domeFactor: 0.65,
+                   hBase: 150, hScale: 0.9, isentSlope: 0.16, glide: 0,
+                   points: [{p:10.0, t:-40}, {p:16.8, t:-25}, {p:26.6, t:-10}, {p:33.8, t:0}, {p:44.0, t:10}, {p:56.2, t:20}, {p:71.1, t:30}] }
+    };
+
+    function linearInterpolation(x, x1, y1, x2, y2) {
+        if (x1 === x2) return y1;
+        return y1 + ((x - x1) * (y2 - y1)) / (x2 - x1);
+    }
+
+    function getSatTemp(pressure, gas) {
+        const points = RefData[gas].points;
+        if (pressure <= points[0].p) return points[0].t;
+        if (pressure >= points[points.length - 1].p) {
+            if (RefData[gas].type === 'transcritical' && pressure > 73) return Infinity;
+            return points[points.length - 1].t;
+        }
+        for (let i = 0; i < points.length - 1; i++) {
+            if (pressure >= points[i].p && pressure <= points[i+1].p) {
+                return linearInterpolation(pressure, points[i].p, points[i].t, points[i+1].p, points[i+1].t);
+            }
+        }
+        return 0;
+    }
+
+    function getSatPressure(temp, gas) {
+        const points = RefData[gas].points;
+        if (temp <= points[0].t) return points[0].p;
+        if (temp >= points[points.length - 1].t) return points[points.length - 1].p;
+        for (let i = 0; i < points.length - 1; i++) {
+            if (temp >= points[i].t && temp <= points[i+1].t) {
+                return linearInterpolation(temp, points[i].t, points[i].p, points[i+1].t, points[i+1].p);
+            }
+        }
+        return 1.0;
+    }
+
+    // =====================================================================
+    // ================= ESTADO GLOBAL Y VARIABLES =========================
+    // =====================================================================
+    let gasActual = 'R134a';
+    let pFactor = 1.0; 
+
+    // Límites dinámicos de los presostatos
+    const pLim = {
+        lpAj: { t: -0.2, b: 7.5, s: 0.1 },
+        lpDif: { t: 4.0, b: 0.7, s: 0.1 },
+        lpSaf: { t: -0.9, b: 7.0, s: 0.1 },
+        hpAj: { t: 8.0, b: 32.0, s: 0.5 },
+        hpDif: { t: 6.0, b: 1.8, s: 0.2 },
+        hpSaf: { t: 8.0, b: 32.0, s: 0.5 }
+    };
+
+    // Catálogo de modelos de Presostatos
+    const PresostatosData = {
+        lp: {
+            'KP1': { n: 'KP 1', vT: -0.2, vB: 7.5, dT: 4.0, dB: 0.7, sT: -0.9, sB: 7.0, sD: 0.7, lAj: ['-0.2','0','2','4','6','7.5'], lDf: ['4','3','2','1','0.7'], lSf: ['-0.9','0','2','4','6','7'] },
+            'KP2': { n: 'KP 2', vT: -0.2, vB: 14, dT: 5.0, dB: 1.0, sT: -0.9, sB: 14, sD: 1.0, lAj: ['-0.2','3','7','10','14'], lDf: ['5','4','3','2','1'], lSf: ['-0.9','2','6','10','14'] },
+            'KP6W': { n: 'KP 6W', vT: 10, vB: 45, dT: 10, dB: 2.0, sT: 5, sB: 45, sD: 2.0, lAj: ['10','20','30','40','45'], lDf: ['10','8','6','4','2'], lSf: ['5','15','25','35','45'] },
+            'CS_LP': { n: 'CS Baja', vT: 2, vB: 20, dT: 6.0, dB: 1.0, sT: 2, sB: 20, sD: 1.0, lAj: ['2','6','10','15','20'], lDf: ['6','4','2','1'], lSf: ['2','6','10','15','20'] },
+            'ACB_LP': { n: 'ACB LP', vT: -0.5, vB: 7, dT: 3.0, dB: 0.5, sT: -0.5, sB: 7, sD: 1.0, lAj: ['-0.5','1','3','5','7'], lDf: ['3','2','1','0.5'], lSf: ['-0.5','1','3','5','7'] }
+        },
+        hp: {
+            'KP5': { n: 'KP 5', vT: 8, vB: 32, dT: 6, dB: 1.8, sT: 8, sB: 32, sD: 3.0, lAj: ['8','14','20','26','32'], lDf: ['6','5','4','3','2'], lSf: ['8','14','20','26','32'] },
+            'KP7': { n: 'KP 7', vT: 8, vB: 42, dT: 10, dB: 4.0, sT: 8, sB: 42, sD: 4.0, lAj: ['8','15','25','35','42'], lDf: ['10','8','6','4','2'], lSf: ['8','15','25','35','42'] },
+            'CS150': { n: 'CS 150', vT: 40, vB: 140, dT: 20, dB: 5.0, sT: 40, sB: 140, sD: 10.0, lAj: ['40','70','100','120','140'], lDf: ['20','15','10','5'], lSf: ['40','70','100','120','140'] },
+            'CS_HP': { n: 'CS Alta', vT: 4, vB: 20, dT: 6.0, dB: 1.0, sT: 4, sB: 20, sD: 2.0, lAj: ['4','8','12','16','20'], lDf: ['6','4','2','1'], lSf: ['4','8','12','16','20'] },
+            'ACB_HP': { n: 'ACB HP', vT: 10, vB: 45, dT: 10.0, dB: 2.0, sT: 10, sB: 45, sD: 3.0, lAj: ['10','20','30','40','45'], lDf: ['10','7','4','2'], lSf: ['10','20','30','40','45'] }
+        }
+    };
+
+    let estadoLpInterno = true;
+    let estadoHpInterno = true;
+    let isCompressorOn = true; 
+    let isPaused = false; 
+    let cargaRefrigerante = 100; 
+
+    let bypassLpActivo = false;
+    let bypassHpActivo = false;
+    
+    // VARIABLES PARA SISTEMA DE DAÑO LETAL
+    let damageCounter = 0;
+    const MAX_DAMAGE = 100; // 5 segundos aprox a 50ms/tick
+    
+    let globalSH = 8.0;
+    let globalSC = 5.0;
+
+    let lpAj = 3.5;
+    let lpDif = 1.5;
+    let hpAj = 20.0;
+    let hpDif = 2.0;
+
+    let lpSafAj = 0.5;
+    let hpSafAj = 25.0;
+    let lpSafTripped = false;
+    let hpSafTripped = false;
+    const lpSafDiff = 0.7; 
+    const hpSafDiff = 3.0; 
+
+    let currentLp = 4.0;
+    let currentHp = 15.0;
+    let opLpTarget = 1.0;  
+    let opHpTarget = 14.0; 
+    let eqPressure = 5.0;  
+
+    let particleContainer, pistonAssembly, valveDischarge, valveLiquid, valveSuction, allValves;
+    const animPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    animPath.setAttribute('d', 'M 349 180 V 100 H 125 V 320 H 349 V 260');
+    
+    const pathLength = animPath.getTotalLength();
+    let particles = [];
+    let animationFrameId;
+
+    const valveDischargePos = 40; 
+    const valveLiquidPos = 364; 
+    const valveSuctionPos = 768;
+    const condenserExit = 270; 
+    const expansionValvePos = 424;
+    const evaporatorExit = 699;
+
+    function moverPunteroVisual(id, valor, valTop, valBottom) {
+        const el = document.getElementById(id);
+        if (!el || isNaN(valor)) return;
+        let porcentaje = ((valor - valBottom) / (valTop - valBottom)) * 100;
+        porcentaje = Math.max(0, Math.min(100, porcentaje));
+        el.style.bottom = `calc(${porcentaje}% - 3px)`;
+    }
+
+    // =====================================================================
+    // ================= RENDERIZADO DE LA BARRA DINÁMICA ==================
+    // =====================================================================
+    function drawPressureBarScale() {
+        const scaleSvg = document.getElementById('pressure-bar-scale-svg');
+        if (!scaleSvg) return;
+        
+        while (scaleSvg.firstChild) scaleSvg.removeChild(scaleSvg.firstChild);
+        
+        const minP = RefData[gasActual].barMin;
+        const maxP = RefData[gasActual].barMax;
+        const totalRange = maxP - minP;
+        
+        const baseline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        baseline.setAttribute('x1', '0%'); baseline.setAttribute('x2', '100%');
+        baseline.setAttribute('y1', '0'); baseline.setAttribute('y2', '0');
+        baseline.setAttribute('stroke', 'var(--border-strong)');
+        baseline.setAttribute('stroke-width', '2');
+        scaleSvg.appendChild(baseline);
+
+        let majorStep = 5; let mediumStep = 1; let minorStep = 0.5;
+        if (totalRange > 60) { majorStep = 10; mediumStep = 5; minorStep = 1; }
+        
+        for (let p = minP; p <= maxP; p += minorStep) {
+            p = Math.round(p * 10) / 10;
+            const percent = ((p - minP) / totalRange) * 100;
+            if (percent < 0 || percent > 100) continue;
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', `${percent}%`); line.setAttribute('x2', `${percent}%`);
+            line.setAttribute('y1', '0'); 
+            
+            if (p % majorStep === 0 || p === minP || p === maxP) {
+                line.setAttribute('y2', '8');
+                line.setAttribute('stroke', 'var(--text-muted)');
+                line.setAttribute('stroke-width', '1.5');
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', `${percent}%`); text.setAttribute('y', '20');
+                text.textContent = p;
+                if (p === 0) { text.setAttribute('fill', 'var(--status-info)'); text.setAttribute('font-weight', '800'); }
+                scaleSvg.appendChild(text);
+            } else if (p % mediumStep === 0) {
+                line.setAttribute('y2', '5'); line.setAttribute('stroke', 'var(--border-strong)'); line.setAttribute('stroke-width', '1');
+            } else {
+                line.setAttribute('y2', '3'); line.setAttribute('stroke', 'var(--border-strong)'); line.setAttribute('stroke-width', '0.5');
+            }
+            scaleSvg.appendChild(line);
+        }
+
+        const unitText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        unitText.setAttribute('x', '100%'); unitText.setAttribute('y', '20');
+        unitText.setAttribute('dx', '12'); unitText.setAttribute('text-anchor', 'start');
+        unitText.setAttribute('font-style', 'italic'); unitText.textContent = 'bar';
+        scaleSvg.appendChild(unitText);
+    }
+
+    function updatePressureBars() {
+        const minP = RefData[gasActual].barMin;
+        const maxP = RefData[gasActual].barMax;
+        const totalRange = maxP - minP;
+
+        const lpCutin = lpAj; const lpCutout = lpAj - lpDif;
+        const hpCutout = hpAj; const hpCutin = hpAj - hpDif;
+
+        const lpCutoutPercent = ((lpCutout - minP) / totalRange) * 100;
+        const lpCutinPercent = ((lpCutin - minP) / totalRange) * 100;
+        const hpCutinPercent = ((hpCutin - minP) / totalRange) * 100;
+        const hpCutoutPercent = ((hpCutout - minP) / totalRange) * 100;
+
+        document.getElementById('zone-lp-danger').style.width = `${Math.max(0, lpCutoutPercent)}%`;
+        document.getElementById('zone-lp-warning').style.left = `${Math.max(0, lpCutoutPercent)}%`;
+        document.getElementById('zone-lp-warning').style.width = `${Math.max(0, lpCutinPercent - lpCutoutPercent)}%`;
+        document.getElementById('zone-safe').style.left = `${Math.max(0, lpCutinPercent)}%`;
+        document.getElementById('zone-safe').style.width = `${Math.max(0, hpCutinPercent - lpCutinPercent)}%`;
+        document.getElementById('zone-hp-warning').style.left = `${Math.max(0, hpCutinPercent)}%`;
+        document.getElementById('zone-hp-warning').style.width = `${Math.max(0, hpCutoutPercent - hpCutinPercent)}%`;
+        document.getElementById('zone-hp-danger').style.left = `${Math.max(0, hpCutoutPercent)}%`;
+        document.getElementById('zone-hp-danger').style.width = `${Math.max(0, 100 - hpCutoutPercent)}%`;
+
+        const lpSafPercent = ((lpSafAj - minP) / totalRange) * 100;
+        const hpSafPercent = ((hpSafAj - minP) / totalRange) * 100;
+        
+        // --- NUEVO SISTEMA DINÁMICO ANTI-SOLAPAMIENTO (Collision Detection) ---
+        const barContainer = document.getElementById('pressure-bar-container');
+        const barWidth = barContainer ? barContainer.offsetWidth : 800;
+
+        let labelData = [
+            { id: 'cal-lp-saf', p: lpSafPercent, text: `SAF: ${lpSafAj.toFixed(1)}` },
+            { id: 'cal-lp-out', p: lpCutoutPercent, text: `Out: ${lpCutout.toFixed(1)}` },
+            { id: 'cal-lp-in',  p: lpCutinPercent, text: `In: ${lpCutin.toFixed(1)}` },
+            { id: 'cal-hp-in',  p: hpCutinPercent, text: `In: ${hpCutin.toFixed(1)}` },
+            { id: 'cal-hp-out', p: hpCutoutPercent, text: `Out: ${hpCutout.toFixed(1)}` },
+            { id: 'cal-hp-saf', p: hpSafPercent, text: `SAF: ${hpSafAj.toFixed(1)}` }
+        ];
+
+        // 1. Asignar anchos estimados y posiciones base
+        labelData.forEach(d => {
+            d.cx = (d.p / 100) * barWidth;
+            d.row = 0;
+            d.shiftX = 0;
+            d.width = d.text.length * 6.5 + 14; 
+        });
+
+        // 2. Ordenar de izquierda a derecha para procesar colisiones consecutivas
+        labelData.sort((a, b) => a.cx - b.cx);
+
+        // 3. Motor de resolución de colisiones
+        for (let i = 0; i < labelData.length; i++) {
+            let curr = labelData[i];
+            let collision = true;
+            let attempts = 0;
+            
+            while (collision && attempts < 10) {
+                collision = false;
+                let currL = curr.cx + curr.shiftX - curr.width/2;
+                let currR = curr.cx + curr.shiftX + curr.width/2;
+                
+                for (let j = 0; j < i; j++) {
+                    let prev = labelData[j];
+                    if (prev.row === curr.row) {
+                        let prevL = prev.cx + prev.shiftX - prev.width/2;
+                        let prevR = prev.cx + prev.shiftX + prev.width/2;
+                        
+                        if (currL < prevR + 4 && currR > prevL - 4) { // 4px de gap de seguridad
+                            collision = true;
+                            if (curr.row < 1) { // Límite de 2 filas (0 y 1)
+                                curr.row++;
+                                curr.shiftX = 0;
+                            } else { // Si no caben en altura, empujar lateralmente a la derecha
+                                curr.shiftX = (prevR + 4) - curr.cx + curr.width/2;
+                            }
+                            break;
+                        }
+                    }
+                }
+                attempts++;
+            }
+        }
+
+        // 4. Aplicar los estilos calculados al DOM de forma limpia
+        labelData.forEach(d => {
+            let el = document.getElementById(d.id);
+            if (!el) return;
+            el.style.left = `${Math.max(0, Math.min(100, d.p))}%`;
+            
+            let lbl = el.querySelector('.cal-lbl');
+            let line = el.querySelector('.cal-line');
+            if (lbl) {
+                lbl.textContent = d.text;
+                let bottomBase = 26; 
+                let finalBottom = bottomBase + (d.row * 24); // 24px entre filas
+                
+                lbl.style.bottom = `${finalBottom}px`;
+                lbl.style.transform = `translateX(calc(-50% + ${d.shiftX}px))`;
+                
+                if (line) {
+                    let dy = finalBottom - 20; // 20px es la altura del marcador base
+                    let dx = d.shiftX;
+                    // Calcular inclinación si la etiqueta ha sido empujada
+                    let length = Math.sqrt(dx*dx + dy*dy);
+                    let angle = Math.atan2(dx, dy) * (180 / Math.PI);
+                    
+                    line.style.height = `${length}px`;
+                    line.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+                }
+            }
+        });
+
+        const lpIndPercent = ((currentLp - minP) / totalRange) * 100;
+        const hpIndPercent = ((currentHp - minP) / totalRange) * 100;
+
+        document.getElementById('lp-bar-indicator').style.left = `${Math.max(0, Math.min(100, lpIndPercent))}%`;
+        document.getElementById('hp-bar-indicator').style.left = `${Math.max(0, Math.min(100, hpIndPercent))}%`;
+
+        let lpT = getSatTemp(currentLp, gasActual);
+        let hpT = getSatTemp(currentHp, gasActual);
+        let strLpT = (lpT === Infinity) ? 'Transcrítico' : lpT.toFixed(1) + ' °C';
+        let strHpT = (hpT === Infinity) ? 'Transcrítico' : hpT.toFixed(1) + ' °C';
+
+        document.getElementById('lp-bar-indicator').innerHTML = `${currentLp.toFixed(1)} bar<span class="dyn-t">${strLpT}</span>`;
+        document.getElementById('hp-bar-indicator').innerHTML = `${currentHp.toFixed(1)} bar<span class="dyn-t">${strHpT}</span>`;
+        
+        document.getElementById('lp-cycle-delimeter').style.left = `${Math.max(0, Math.min(100, lpIndPercent))}%`;
+        document.getElementById('hp-cycle-delimeter').style.left = `${Math.max(0, Math.min(100, hpIndPercent))}%`;
+
+        // Nuevos conectores dinámicos
+        let leftP = Math.max(0, Math.min(100, lpIndPercent));
+        let rightP = Math.max(0, Math.min(100, hpIndPercent));
+        let widthP = Math.max(0, rightP - leftP);
+        
+        let compTrans = document.getElementById('cycle-comp-transition');
+        if(compTrans) { compTrans.style.left = `${leftP}%`; compTrans.style.width = `${widthP}%`; }
+        let expTrans = document.getElementById('cycle-exp-transition');
+        if(expTrans) { expTrans.style.left = `${leftP}%`; expTrans.style.width = `${widthP}%`; }
+    }
+
+    // =====================================================================
+    // ================= LÓGICA DE ESCENARIOS Y TEMPERATURA ================
+    // =====================================================================
+    function cambiarRefrigerante() {
+        const refSelect = document.getElementById("refrigerante");
+        if(refSelect) gasActual = refSelect.value;
+        
+        const ref = RefData[gasActual];
+        pFactor = ref.defHp / RefData['R134a'].defHp; 
+        
+        initPresostatosDropdowns(gasActual, true); // Cambiar selectores y forzar por defecto
+        cambiarEscenario(true);
+
+        const fallosSel = document.getElementById("listaFallos");
+        if(fallosSel) fallosSel.value = "normal";
+        
+        lpSafTripped = false;
+        hpSafTripped = false;
+        damageCounter = 0;
+        drawPressureBarScale(); 
+        aplicarFallo();
+    }
+
+    function getDefaultsForGas(gas) {
+        if (gas === 'R410A' || gas === 'R32') return { lp: 'KP2', hp: 'KP7' };
+        if (gas === 'R744') return { lp: 'KP6W', hp: 'CS150' };
+        return { lp: 'KP1', hp: 'KP5' };
+    }
+
+    function initPresostatosDropdowns(gas, forceDefault = false) {
+        const defs = getDefaultsForGas(gas);
+        
+        const selLp = document.getElementById('selModelLp');
+        if(selLp) {
+            let currentVal = selLp.value || defs.lp;
+            selLp.innerHTML = `
+                <option value="KP1">Modelo KP 1 (-0.2 a 7.5 bar) ${defs.lp === 'KP1' ? '★ Defecto' : ''}</option>
+                <option value="KP2">Modelo KP 2 (-0.2 a 14.0 bar) ${defs.lp === 'KP2' ? '★ Defecto' : ''}</option>
+                <option value="KP6W">Modelo KP 6W (10.0 a 45.0 bar) ${defs.lp === 'KP6W' ? '★ Defecto' : ''}</option>
+                <option value="CS_LP">Presostato CS Baja (2.0 a 20.0 bar) ${defs.lp === 'CS_LP' ? '★ Defecto' : ''}</option>
+                <option value="ACB_LP">Transductor/Cartucho ACB (-0.5 a 7.0 bar) ${defs.lp === 'ACB_LP' ? '★ Defecto' : ''}</option>
+            `;
+            selLp.value = forceDefault ? defs.lp : currentVal;
+            cambiarModeloPresostato('lp', false);
+        }
+
+        const selHp = document.getElementById('selModelHp');
+        if(selHp) {
+            let currentVal = selHp.value || defs.hp;
+            selHp.innerHTML = `
+                <option value="KP5">Modelo KP 5 (8.0 a 32.0 bar) ${defs.hp === 'KP5' ? '★ Defecto' : ''}</option>
+                <option value="KP7">Modelo KP 7 (8.0 a 42.0 bar) ${defs.hp === 'KP7' ? '★ Defecto' : ''}</option>
+                <option value="CS150">Modelo CS 150 (40.0 a 140.0 bar) ${defs.hp === 'CS150' ? '★ Defecto' : ''}</option>
+                <option value="CS_HP">Presostato CS Alta (4.0 a 20.0 bar) ${defs.hp === 'CS_HP' ? '★ Defecto' : ''}</option>
+                <option value="ACB_HP">Transductor/Cartucho ACB (10.0 a 45.0 bar) ${defs.hp === 'ACB_HP' ? '★ Defecto' : ''}</option>
+            `;
+            selHp.value = forceDefault ? defs.hp : currentVal;
+            cambiarModeloPresostato('hp', false);
+        }
+    }
+
+    function clampVal(val, a, b) {
+        let min = Math.min(a, b);
+        let max = Math.max(a, b);
+        return Math.max(min, Math.min(max, val));
+    }
+
+    function cambiarModeloPresostato(type, triggerCalc = true) {
+        const sel = document.getElementById(type === 'lp' ? 'selModelLp' : 'selModelHp');
+        if(!sel) return;
+        const modelKey = sel.value;
+        const m = PresostatosData[type][modelKey];
+
+        if(type === 'lp') {
+            pLim.lpAj.t = m.vT; pLim.lpAj.b = m.vB;
+            pLim.lpDif.t = m.dT; pLim.lpDif.b = m.dB;
+            pLim.lpSaf.t = m.sT; pLim.lpSaf.b = m.sB;
+            
+            lpAj = clampVal(lpAj, m.vT, m.vB);
+            lpDif = clampVal(lpDif, m.dT, m.dB);
+            lpSafAj = clampVal(lpSafAj, m.sT, m.sB);
+        } else {
+            pLim.hpAj.t = m.vT; pLim.hpAj.b = m.vB;
+            pLim.hpDif.t = m.dT; pLim.hpDif.b = m.dB;
+            pLim.hpSaf.t = m.sT; pLim.hpSaf.b = m.sB;
+            
+            hpAj = clampVal(hpAj, m.vT, m.vB);
+            hpDif = clampVal(hpDif, m.dT, m.dB);
+            hpSafAj = clampVal(hpSafAj, m.sT, m.sB);
+        }
+
+        const setL = (id, arr) => { const el = document.getElementById(id); if(el) el.innerHTML = arr.map(v => `<span>${v}</span>`).join(''); };
+        const setN = (id, txt) => { const el = document.getElementById(id); if(el) el.innerHTML = `${txt}<br>MADE IN<br>POLAND`; };
+        const setLN = (id, txt) => { const el = document.getElementById(id); if(el) el.innerHTML = `Danfoss ${txt}`; };
+
+        if(type === 'lp') {
+            setL('lbl-aj-lp', m.lAj); setL('lbl-dif-lp', m.lDf); setL('lbl-saf-lp', m.lSf);
+            setN('model-saf-lp', m.n); setLN('model-aj-lp', m.n);
+            const resetLbl = document.getElementById('reset-txt-lp');
+            if(resetLbl) resetLbl.innerHTML = `RESET DIFF.: ${m.sD.toFixed(1)} bar`;
+        } else {
+            setL('lbl-aj-hp', m.lAj); setL('lbl-dif-hp', m.lDf); setL('lbl-saf-hp', m.lSf);
+            setN('model-saf-hp', m.n); setLN('model-aj-hp', m.n);
+            const resetLbl = document.getElementById('reset-txt-hp');
+            if(resetLbl) resetLbl.innerHTML = `RESET DIFF.: ${m.sD.toFixed(1)} bar`;
+        }
+
+        if(triggerCalc) calcular();
+    }
+
+    function cambiarEscenario(isGasChange = false) {
+        const esc = document.getElementById("escenarioCamara").value;
+        let tCam = parseFloat(document.getElementById("numTempCamara").value);
+        let tAmb = parseFloat(document.getElementById("numTempAmbiente").value);
+        
+        if (esc === "conservacion") { tCam = 4; tAmb = 30; }
+        else if (esc === "congelacion") { tCam = -20; tAmb = 30; }
+        else if (esc === "climatizacion") { tCam = 22; tAmb = 35; }
+
+        document.getElementById("numTempCamara").value = tCam;
+        document.getElementById("numTempAmbiente").value = tAmb;
+        aplicarTempsObjetivo(tCam, tAmb, isGasChange);
+    }
+
+    function cambiarTemps() {
+        document.getElementById("escenarioCamara").value = "custom";
+        let tCam = parseFloat(document.getElementById("numTempCamara").value);
+        let tAmb = parseFloat(document.getElementById("numTempAmbiente").value);
+        if(isNaN(tCam)) tCam = 4;
+        if(isNaN(tAmb)) tAmb = 30;
+        document.getElementById("numTempCamara").value = tCam;
+        document.getElementById("numTempAmbiente").value = tAmb;
+        aplicarTempsObjetivo(tCam, tAmb, false);
+    }
+
+    function aplicarTempsObjetivo(tCam, tAmb, isGasChange) {
+        let tEvapTarget = tCam - 8;
+        let pCutout = getSatPressure(tEvapTarget, gasActual);
+        let difLp = (gasActual === 'R744') ? 5.0 : ((gasActual === 'R410A' || gasActual === 'R32') ? 2.5 : 1.5);
+        
+        lpAj = clampVal(pCutout + difLp, pLim.lpAj.t, pLim.lpAj.b);
+        lpDif = clampVal(difLp, pLim.lpDif.t, pLim.lpDif.b);
+
+        let tCondTarget = tAmb + 12;
+        let pHp = getSatPressure(tCondTarget, gasActual);
+        let difHp = (gasActual === 'R744') ? 6.0 : ((gasActual === 'R410A' || gasActual === 'R32') ? 4.0 : 2.5);
+        
+        hpAj = clampVal(pHp + difHp, pLim.hpAj.t, pLim.hpAj.b);
+        hpDif = clampVal(difHp, pLim.hpDif.t, pLim.hpDif.b);
+
+        lpSafAj = clampVal(pCutout - 1.0, pLim.lpSaf.t, pLim.lpSaf.b);
+        hpSafAj = clampVal(hpAj + 4.0, pLim.hpSaf.t, pLim.hpSaf.b);
+
+        if (gasActual === 'R744') { 
+            hpAj = clampVal(90.0, pLim.hpAj.t, pLim.hpAj.b); 
+            hpDif = clampVal(10.0, pLim.hpDif.t, pLim.hpDif.b); 
+            hpSafAj = clampVal(120.0, pLim.hpSaf.t, pLim.hpSaf.b); 
+        }
+
+        const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val.toFixed(1); }
+        setVal('valLpAj', lpAj); setVal('valLpDif', lpDif);
+        setVal('valHpAj', hpAj); setVal('valHpDif', hpDif);
+        setVal('txtLpSaf', lpSafAj); setVal('txtHpSaf', hpSafAj);
+
+        if (!isGasChange) calcular();
+    }
+
+    function resetSafety(type) {
+        if (type === 'lp' && lpSafTripped) {
+            if (currentLp >= lpSafAj + lpSafDiff) { lpSafTripped = false; calcular(); }
+        }
+        if (type === 'hp' && hpSafTripped) {
+            if (currentHp <= hpSafAj - hpSafDiff) { hpSafTripped = false; calcular(); }
+        }
+    }
+
+    function tripTest(type) {
+        if (type === 'lp') lpSafTripped = true;
+        if (type === 'hp') hpSafTripped = true;
+        calcular();
+    }
+
+    // =====================================================================
+    // ================= DIAGNÓSTICO DE AVERÍAS E INTERACCIÓN VÁLVULAS =======
+    // =====================================================================
+    function cambiarCarga() {
+        cargaRefrigerante = parseInt(document.getElementById("sliderCarga").value);
+        document.getElementById("numCarga").value = cargaRefrigerante;
+        aplicarFallo(); 
+    }
+
+    function cambiarCargaDesdeInput() {
+        let val = parseInt(document.getElementById("numCarga").value);
+        if (isNaN(val)) val = 100;
+        val = Math.max(0, Math.min(200, val)); 
+        
+        // FIX 2.2: Forzar actualización de UI con valor seguro
+        document.getElementById("numCarga").value = val;
+        document.getElementById("sliderCarga").value = val;
+        cargaRefrigerante = val;
+        
+        aplicarFallo();
+    }
+
+    function aplicarFallo() {
+        const fallosEl = document.getElementById("listaFallos");
+        const exp = document.getElementById("explicacionFallo");
+        if(!fallosEl || !exp) return;
+        
+        const fallo = fallosEl.value;
+        let baseText = "";
+
+        const scale = (val) => val * pFactor;
+        const chargeFactor = cargaRefrigerante / 100.0;
+        
+        let baseLp = 1.0; let baseHp = 14.0; let baseEq = 5.0;
+
+        // 1. CÁLCULO BASE SEGÚN AVERÍA DEL SELECT
+        if (fallo === "normal") {
+            if (chargeFactor === 1.0) {
+                opLpTarget = scale(baseLp); opHpTarget = scale(baseHp); eqPressure = scale(baseEq);
+            } else if (chargeFactor < 1.0) {
+                opLpTarget = scale(baseLp - (1.0 - chargeFactor) * 1.5);
+                opHpTarget = scale(baseHp - (1.0 - chargeFactor) * 9.0);
+                eqPressure = scale(baseEq - (1.0 - chargeFactor) * 3.0);
+                baseText = `<strong>Carga Baja (${cargaRefrigerante}%):</strong> Las presiones caen proporcionalmente. Riesgo de vacío en succión.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Buscar y reparar la fuga, realizar prueba de estanqueidad, hacer vacío profundo y recargar a peso.</span>`;
+            } else {
+                opLpTarget = scale(baseLp + (chargeFactor - 1.0) * 3.0);
+                opHpTarget = scale(baseHp + (chargeFactor - 1.0) * 16.0);
+                eqPressure = scale(baseEq + (chargeFactor - 1.0) * 7.0);
+                baseText = `<strong>Sobrecarga de Gas (${cargaRefrigerante}%):</strong> Inundación del condensador. HP se eleva peligrosamente.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Recuperar refrigerante con una recuperadora hasta alcanzar la carga nominal y presiones correctas.</span>`;
+            }
+        } else if (fallo === "fallo_ctrl_lp") {
+            opLpTarget = scale(-0.8 * Math.max(0.1, chargeFactor)); opHpTarget = scale(10.0 * chargeFactor); eqPressure = scale(4.0 * chargeFactor);
+            baseText = `<strong>Avería Eléctrica (Control LP Pegado):</strong> Fuga o bloqueo repentino. El contacto del presostato de control se ha fundido cerrado y NO detiene el motor. La presión caerá críticamente hasta disparar la Seguridad LP.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Cortar tensión eléctrica, sustituir el presostato de control LP averiado y rearmar la seguridad.</span>`;
+        } else if (fallo === "fallo_ctrl_hp") {
+            opLpTarget = scale(3.0 * chargeFactor); opHpTarget = scale(40.0 * chargeFactor); eqPressure = scale(10.0 * chargeFactor);
+            baseText = `<strong>Avería Eléctrica (Control HP Pegado):</strong> Bloqueo de condensación severo. El presostato de control ha fallado cerrado. La presión subirá sin control hasta activar la Seguridad HP.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Cortar tensión, limpiar condensador si estuviera obstruido, cambiar el presostato de control HP y rearmar.</span>`;
+        } else if (fallo === "evap_hielo") {
+            opLpTarget = scale(-0.5 * Math.max(0.1, chargeFactor)); opHpTarget = scale(12.0 * chargeFactor); eqPressure = scale(4.0 * chargeFactor);
+            baseText = `<strong>Evaporador Congelado (Carga: ${cargaRefrigerante}%):</strong> Sin intercambio de calor, LP hace vacío rápidamente.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Forzar desescarche manual. Revisar resistencias de deshielo, sondas y reloj/parámetros del controlador.</span>`;
+        } else if (fallo === "cond_sucio") {
+            opLpTarget = scale(2.5 * chargeFactor); opHpTarget = scale(28.0 * chargeFactor); eqPressure = scale(8.0 * chargeFactor);
+            baseText = `<strong>Condensador Sucio (Carga: ${cargaRefrigerante}%):</strong> HP sube velozmente hasta cortar por seguridad extrema.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Limpiar exhaustivamente las aletas del condensador con nitrógeno a baja presión, agua o químico limpiador alcalino.</span>`;
+        } else if (fallo === "ven_roto") {
+            opLpTarget = scale(3.0 * chargeFactor); opHpTarget = scale(35.0 * chargeFactor); eqPressure = scale(10.0 * chargeFactor);
+            baseText = `<strong>Ventilador Roto (Carga: ${cargaRefrigerante}%):</strong> Sin condensación, subida crítica inmediata de HP.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Verificar llegada de tensión al ventilador. Sustituir el motor del ventilador o el condensador de arranque.</span>`;
+        } else if (fallo === "obstruccion") {
+            opLpTarget = scale(-0.8 * Math.max(0.1, chargeFactor)); opHpTarget = scale(10.0 * chargeFactor); eqPressure = scale(4.0 * chargeFactor);
+            baseText = `<strong>Obstrucción Fija (Carga: ${cargaRefrigerante}%):</strong> Corte por baja inminente por falta de llegada de líquido.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Localizar el punto frío (salto térmico). Sustituir filtro deshidratador obstruido o válvula bloqueada.</span>`;
+        } else if (fallo === "valvulas_rotas") {
+            opLpTarget = scale(6.0 * chargeFactor); opHpTarget = scale(6.0 * chargeFactor); eqPressure = scale(6.0 * chargeFactor);
+            baseText = `<strong>Válvulas de Compresor Rotas (Carga: ${cargaRefrigerante}%):</strong> Las presiones se igualan (descompresión).<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Extraer refrigerante. Reparar plato de válvulas (si es semihermético) o sustituir el compresor completo.</span>`;
+        } else if (fallo === "carga_termica") {
+            opLpTarget = scale(6.0 * chargeFactor); opHpTarget = scale(20.0 * chargeFactor); eqPressure = scale(8.0 * chargeFactor);
+            baseText = `<strong>Alta Carga Térmica (Carga: ${cargaRefrigerante}%):</strong> Al entrar calor, el evaporador satura al compresor, subiendo LP y HP.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Esperar a que el producto alcance régimen. Evitar introducir grandes volúmenes de género caliente de golpe.</span>`;
+        } else if (fallo === "vet_abierta") {
+            opLpTarget = scale(baseLp + 1.5 * chargeFactor); opHpTarget = scale(baseHp + 2.0 * chargeFactor); eqPressure = scale(baseEq * chargeFactor);
+            baseText = `<strong>Bulbo VET Desprendido:</strong> La válvula abre al máximo leyendo la temperatura ambiente. Riesgo inminente de golpe de líquido en el compresor al caer el recalentamiento a 0K.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Limpiar la tubería, fijar firmemente el bulbo con su abrazadera en la posición horaria correcta y aislarlo térmicamente.</span>`;
+        } else if (fallo === "vet_cerrada") {
+            opLpTarget = scale(-0.6 * Math.max(0.1, chargeFactor)); opHpTarget = scale(10.0 * chargeFactor); eqPressure = scale(4.0 * chargeFactor);
+            baseText = `<strong>Bulbo VET Descargado:</strong> La válvula se cierra al perder la presión termostática. Inanición del evaporador, caída crítica de LP (corte seguro) y aumento extremo del recalentamiento.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Reemplazar el orificio, el elemento termostático o la Válvula de Expansión completa.</span>`;
+        } else if (fallo === "humedad") {
+            opLpTarget = scale(-0.7 * Math.max(0.1, chargeFactor)); opHpTarget = scale(12.0 * chargeFactor); eqPressure = scale(5.0 * chargeFactor);
+            baseText = `<strong>Tapón de Humedad:</strong> El hielo bloquea la VET. LP cae a vacío cortando por presostato. Al parar, el hielo se funde, el gas pasa de nuevo y rearranca creando un ciclo continuo (Penduleo).<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Recuperar gas. Sustituir filtro deshidratador. Realizar un vacío profundo y prolongado (romper vacío con N2 si es necesario) y recargar.</span>`;
+        } else if (fallo === "ven_evap_roto") {
+            opLpTarget = scale(-0.3 * Math.max(0.1, chargeFactor)); opHpTarget = scale(11.0 * chargeFactor); eqPressure = scale(4.5 * chargeFactor);
+            baseText = `<strong>Ventilador Evaporador Roto:</strong> Sin flujo de aire, el refrigerante no se evapora. LP cae precipitadamente y el recalentamiento desaparece (riesgo de líquido).<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Sustituir el motor del ventilador de la unidad interior y descongelar la batería si ha hecho bloque de hielo.</span>`;
+        } else if (fallo === "incondensables") {
+            opLpTarget = scale(baseLp * chargeFactor); opHpTarget = scale(30.0 * chargeFactor); eqPressure = scale(baseEq * chargeFactor);
+            baseText = `<strong>Gases Incondensables (Aire):</strong> El aire se acumula en el condensador aislando el intercambio. HP sube bruscamente con fluctuaciones (ruido), pero el subenfriamiento no aumenta proporcionalmente.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Recuperar todo el refrigerante (está contaminado), cambiar filtro, hacer un vacío estricto con vacuómetro y recargar gas nuevo.</span>`;
+        } else if (fallo === "aislamiento_malo") {
+            opLpTarget = scale(baseLp * chargeFactor); opHpTarget = scale(baseHp + 2.0 * chargeFactor); eqPressure = scale(baseEq * chargeFactor);
+            baseText = `<strong>Mal Aislamiento en Aspiración:</strong> El gas absorbe calor del exterior. El recalentamiento sube drásticamente calentando el compresor y desplazando el ciclo en Mollier muy a la derecha.<br><span style="color: #34d399; font-weight: 600;">💡 Solución: Reemplazar o añadir coquilla aislante de elastómero (ej. Armaflex) en todo el tramo de la tubería de aspiración.</span>`;
+        } else if (fallo === "quemado") {
+            // FIX 2.1: Mensaje destructivo para el compresor quemado
+            opLpTarget = scale(baseLp); opHpTarget = scale(baseHp); eqPressure = scale(baseEq);
+            baseText = `<strong>💥 COMPRESOR QUEMADO:</strong> Se ha forzado el funcionamiento mediante Bypass manual bajo condiciones mecánicas extremas (vacío o sobrepresión crítica). Los bobinados se han fundido y las válvulas están destruidas.<br><span style="color: #ef4444; font-weight: 600;">💡 Solución Real: Desoldar el compresor, limpiar el circuito de ácidos corrosivos, cambiar filtros antácidos y cobrar una factura astronómica. Usa el botón '🔄 Reiniciar' para empezar de cero.</span>`;
+        }
+
+        // 2. CÁLCULO MODIFICADOR POR INTERACCIÓN DE VÁLVULAS MANUALES (SVG)
+        const vDischarge = document.getElementById('valveDischarge');
+        const vLiquid = document.getElementById('valveLiquid');
+        const vSuction = document.getElementById('valveSuction');
+
+        const vDischargeClosed = vDischarge && vDischarge.classList.contains('closed');
+        const vLiquidClosed = vLiquid && vLiquid.classList.contains('closed');
+        const vSuctionClosed = vSuction && vSuction.classList.contains('closed');
+
+        let showExp = false;
+        if (fallo !== "normal" || chargeFactor !== 1.0) showExp = true;
+
+        if (vDischargeClosed) {
+            opHpTarget = scale(45); // Pico instantáneo de presión letal
+            baseText += `<div style="margin-top: 8px; border-left: 3px solid #ef4444; padding-left: 8px;"><span style="color:#ef4444;">🔴 <strong>Válvula Descarga CERRADA:</strong> Sobrepresión extrema inminente. El gas no puede salir del compresor.</span><br><span style="color: #34d399; font-weight: 600;">💡 Solución: Abrir inmediatamente la válvula de servicio de descarga.</span></div>`;
+            showExp = true;
+        }
+        if (vSuctionClosed) {
+            opLpTarget = scale(-0.8); // Vacío casi absoluto
+            baseText += `<div style="margin-top: 8px; border-left: 3px solid #3b82f6; padding-left: 8px;"><span style="color:#3b82f6;">🔴 <strong>Válvula Aspiración CERRADA:</strong> Vacío inminente. El compresor se ha quedado sin caudal másico de entrada.</span><br><span style="color: #34d399; font-weight: 600;">💡 Solución: Abrir inmediatamente la válvula de servicio de aspiración.</span></div>`;
+            showExp = true;
+        }
+        if (vLiquidClosed && !vSuctionClosed) {
+            opLpTarget = scale(-0.6); // Pump down natural
+            baseText += `<div style="margin-top: 8px; border-left: 3px solid #f59e0b; padding-left: 8px;"><span style="color:#f59e0b;">🟠 <strong>Solenoide de Líquido CERRADA:</strong> Se está realizando un <em>Pump Down</em> (Vaciado del evaporador).</span><br><span style="color: #34d399; font-weight: 600;">💡 Solución: Reabrir válvula para uso normal, o cortar corriente al compresor si el vaciado ha finalizado.</span></div>`;
+            showExp = true;
+        }
+
+        // 3. ACTUALIZACIÓN UI Y MOTOR
+        exp.innerHTML = baseText;
+        if (showExp) {
+            exp.style.display = "block";
+        } else {
+            exp.style.display = "none";
+        }
+
+        actualizarAnimacion(fallo);
+        calcular();
+    }
+
+    // FIX 2.3: Restablecimiento Global del Simulador
+    function resetSimulation() {
+        // Reset Fallos y Daños
+        const selFallo = document.getElementById("listaFallos");
+        selFallo.value = "normal";
+        const optQuemado = Array.from(selFallo.options).find(o => o.value === 'quemado');
+        if(optQuemado) optQuemado.style.display = 'none';
+        
+        damageCounter = 0;
+        lpSafTripped = false;
+        hpSafTripped = false;
+
+        // Reset Entorno
+        document.getElementById("escenarioCamara").value = "conservacion";
+        document.getElementById("numTempCamara").value = 4;
+        document.getElementById("numTempAmbiente").value = 30;
+
+        // Reset Carga
+        document.getElementById("sliderCarga").value = 100;
+        document.getElementById("numCarga").value = 100;
+        cargaRefrigerante = 100;
+
+        // Reset Bypass Manual
+        bypassLpActivo = false;
+        bypassHpActivo = false;
+        document.getElementById('btnBypassLp').classList.remove('active');
+        document.getElementById('btnBypassHp').classList.remove('active');
+
+        // Reset Válvulas Interactivas
+        if (allValves) {
+            allValves.forEach(valve => {
+                valve.classList.remove('closed');
+                valve.classList.add('open');
+            });
+        }
+
+        // Reset Refrigerante a R134a Default
+        const selGas = document.getElementById("refrigerante");
+        selGas.value = "R134a";
+        gasActual = "R134a";
+        pFactor = 1.0;
+        
+        initPresostatosDropdowns(gasActual, true);
+        cambiarEscenario(true);
+        drawPressureBarScale();
+        
+        if (typeof molReset === 'function') molReset(); // Recenter Mollier Diagram
+        aplicarFallo();
+    }
+
+    function togglePause() {
+        isPaused = !isPaused;
+        const btn1 = document.getElementById("btnPause");
+        const btn2 = document.getElementById("btnPauseCiclo");
+        
+        if (isPaused) {
+            if(btn1) { btn1.innerHTML = "▶️ Reanudar"; btn1.classList.add("paused"); }
+            if(btn2) { btn2.innerHTML = "▶️ Reanudar"; btn2.classList.add("paused"); }
+        } else {
+            if(btn1) { btn1.innerHTML = "⏸️ Pausar"; btn1.classList.remove("paused"); }
+            if(btn2) { btn2.innerHTML = "⏸️ Pausar"; btn2.classList.remove("paused"); }
+        }
+    }
+
+    function toggleTheme() {
+        const docEl = document.documentElement;
+        const btnTheme = document.getElementById("btnTheme");
+        if (docEl.getAttribute("data-theme") === "dark") {
+            docEl.removeAttribute("data-theme");
+            btnTheme.innerHTML = "🌙";
+            btnTheme.title = "Activar Tema Oscuro";
+        } else {
+            docEl.setAttribute("data-theme", "dark");
+            btnTheme.innerHTML = "☀️";
+            btnTheme.title = "Activar Tema Claro";
+        }
+    }
+
+    function toggleAppFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log(`Error al intentar activar pantalla completa: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    // Escuchar cambios de pantalla completa (por si el usuario usa la tecla F11 física)
+    document.addEventListener('fullscreenchange', () => {
+        const btn = document.getElementById("btnAppFullscreen");
+        if (btn) {
+            btn.innerHTML = document.fullscreenElement ? "✖" : "⛶";
+            btn.title = document.fullscreenElement ? "Salir de Pantalla Completa (F11)" : "Pantalla Completa (F11)";
+        }
+    });
+
+    function toggleFullscreenCiclo() {
+        const panel = document.getElementById("panelCiclo");
+        const btn = document.getElementById("btnFullscreen");
+        if (panel.classList.contains("fullscreen")) {
+            panel.classList.remove("fullscreen");
+            btn.innerHTML = "⛶ Expandir";
+            document.body.style.overflow = "auto"; // Restaurar scroll del body
+        } else {
+            panel.classList.add("fullscreen");
+            btn.innerHTML = "✖ Reducir";
+            document.body.style.overflow = "hidden"; // Bloquear scroll de fondo
+        }
+    }
+
+    // =====================================================================
+    // ================= LÓGICA MOLLIER DINÁMICO ===========================
+    // =====================================================================
+    
+    // --- ARQUITECTURA: Generador de Elementos SVG Encapsulado ---
+    const SVGBuilder = {
+        getCurveX: function(y, isLiquid) {
+            let nY = Math.max(0, (y - 30) / 250); 
+            let factor = RefData[gasActual]?.domeFactor || 1.0;
+            
+            if (nY === 0) return 160;
+            if (isLiquid) {
+                let delta = 90 * Math.pow(nY, 0.55) + 10 * nY;
+                return 160 - (delta * factor);
+            } else {
+                let delta = 175 * Math.pow(nY, 0.35) - 40 * nY - 35 * Math.pow(nY, 2);
+                return 160 + (delta * factor);
+            }
+        },
+        drawAndrewsBell: function() {
+            let d = "";
+            for(let y = 280; y >= 30; y -= 5) {
+                let x = this.getCurveX(y, true);
+                d += (y === 280 ? "M" : "L") + ` ${x} ${y}`;
+            }
+            for(let y = 30; y <= 280; y += 5) {
+                let x = this.getCurveX(y, false);
+                d += ` L ${x} ${y}`;
+            }
+            const bell = document.getElementById('molBell');
+            if (bell) bell.setAttribute('d', d);
+        }
+    };
+
+    // Funciones puente (legacy support)
+    function getCurveX(y, isLiquid) { return SVGBuilder.getCurveX(y, isLiquid); }
+    function drawBell() { SVGBuilder.drawAndrewsBell(); }
+
+    function updateMollier() {
+        const ref = RefData[gasActual];
+        const bell = document.getElementById('molBell');
+        if (bell) drawBell();
+
+        const minP = ref.barMin;
+        const maxP = ref.barMax;
+        
+        const logBase = Math.log(maxP - minP + 1);
+        const getLogY = (p) => {
+            let safeP = Math.max(0, p - minP + 1);
+            let ratio = Math.log(safeP) / logBase;
+            return 280 - (ratio * 250);
+        };
+
+        let yLp = getLogY(currentLp);
+        let yHp = getLogY(currentHp);
+
+        yLp = Math.max(30, Math.min(290, yLp));
+        yHp = Math.max(30, Math.min(290, yHp));
+        
+        // AUDITORÍA FÍSICA: Detección y simulación del ciclo Transcrítico (CO2)
+        let isTranscritical = (ref.type === 'transcritical' && currentHp >= 73.8);
+
+        let Left_X_Lp = getCurveX(yLp, true);
+        let Right_X_Lp = getCurveX(yLp, false);
+        
+        let Left_X_Hp;
+        const nSatLiq = document.getElementById('molN_sat_liq');
+        if (isTranscritical) {
+            // El fluido es supercrítico, el enfriamiento ocurre fuera de la campana.
+            Left_X_Hp = 160 - 25 - (currentHp - 73.8) * 0.4;
+            if(nSatLiq) nSatLiq.style.display = 'none'; // Desaparece el punto de líquido saturado
+        } else {
+            Left_X_Hp  = getCurveX(yHp, true);
+            if(nSatLiq) nSatLiq.style.display = 'block';
+        }
+
+        // Puntos dinámicos reales dependientes del SH y SC calculados
+        let x1 = Right_X_Lp + (globalSH * 1.5); 
+        
+        // AUDITORÍA FÍSICA: Compresión Isentrópica dinámica. 
+        // Las curvas de entropía divergen (se abren a la derecha) a mayor SH.
+        let isentropicFactor = ref.isentSlope * (1 + (globalSH * 0.03));
+        let x2 = x1 + Math.max(0, (yLp - yHp) * isentropicFactor); 
+        let x3 = Left_X_Hp - (globalSC * 1.5); 
+        let x4 = x3; 
+
+        // AUDITORÍA FÍSICA: Rangos de Entalpías reales adaptados a cada gas
+        let h_base = ref.hBase; 
+        let h_scale = ref.hScale;
+        let h1_val = Math.round(h_base + (x1 - 50) * h_scale);
+        let h2_val = Math.round(h_base + (x2 - 50) * h_scale);
+        let h3_val = Math.round(h_base + (x3 - 50) * h_scale);
+        let h4_val = h3_val; // Proceso Isentálpico (VET)
+
+        const setTermValue = (id, label, val) => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `${label} = ${val} <span style="font-size:13px; font-weight:normal; color: var(--text-muted);">kJ/kg</span>`;
+        };
+        setTermValue('term1_h', 'h<sub>1</sub>', h1_val);
+        setTermValue('term2_h', 'h<sub>2</sub>', h2_val);
+        setTermValue('term3_h', 'h<sub>3</sub>', h3_val);
+        setTermValue('term4_h', 'h<sub>4</sub>', h4_val);
+
+        // AUDITORÍA FÍSICA: Zeotrópicos (Glide) y Transcríticos (TC)
+        let lpT = getSatTemp(currentLp, gasActual);
+        let hpT = getSatTemp(currentHp, gasActual);
+        let strLpT, strHpT;
+
+        if (ref.type === 'zeotropic' && ref.glide > 0) {
+            // Mostrar Burbuja (B) y Rocío (R)
+            strLpT = `B:${lpT.toFixed(1)} / R:${(lpT + ref.glide).toFixed(1)}°C`;
+            strHpT = `B:${hpT.toFixed(1)} / R:${(hpT + ref.glide).toFixed(1)}°C`;
+        } else {
+            strLpT = (lpT === Infinity) ? 'TC' : lpT.toFixed(1) + ' °C';
+            strHpT = (hpT === Infinity || isTranscritical) ? 'TC' : hpT.toFixed(1) + ' °C';
+        }
+        
+        // Cambio de etiqueta Condensador -> Gas Cooler en Transcrítico
+        const condLabel = document.getElementById('svgCondLabel');
+        if (condLabel) {
+            if (isTranscritical) {
+                condLabel.textContent = "Enfriador de Gas";
+                condLabel.setAttribute("fill", "#f87171");
+            } else {
+                condLabel.textContent = "Condensador";
+                condLabel.setAttribute("fill", "var(--text-primary)");
+            }
+        }
+
+        // NUEVOS CÁLCULOS DE ENERGÍA
+        let qe = Math.max(0, h1_val - h4_val);
+        let wc = Math.max(0, h2_val - h1_val);
+        let qc = Math.max(0, h2_val - h3_val);
+        let cop = wc > 0 ? (qe / wc).toFixed(2) : "0.00";
+
+        // CÁLCULO DE RELACIÓN DE COMPRESIÓN (RC) Y RENDIMIENTO VOLUMÉTRICO
+        let pLpAbs = Math.max(0.1, currentLp + 1.0); // Convertir Presión Relativa a Absoluta (Aprox +1 bar)
+        let pHpAbs = Math.max(0.1, currentHp + 1.0); // Convertir Presión Relativa a Absoluta (Aprox +1 bar)
+        let rc = pHpAbs / pLpAbs;
+        
+        let c_espacio_muerto = 5.0; // 5% de espacio muerto típico
+        let nv = 100 - c_espacio_muerto * (rc - 1);
+        nv = Math.max(0, Math.min(100, nv)); // Limitar el rendimiento volumétrico entre 0 y 100%
+
+        const setCalcValue = (id, val, unit) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val + unit;
+        };
+        setCalcValue('calc_qe', qe, ' kJ/kg');
+        setCalcValue('calc_wc', wc, ' kJ/kg');
+        setCalcValue('calc_qc', qc, ' kJ/kg');
+        setCalcValue('calc_rc', rc.toFixed(2), '');
+        setCalcValue('calc_nv', nv.toFixed(1), ' %');
+        
+        const elCop = document.getElementById('calc_cop');
+        if (elCop) elCop.textContent = cop;
+
+        // Fórmulas Dinámicas
+        const setFormValue = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = text;
+        };
+        setFormValue('form_qe', `= ${h1_val} - ${h4_val}`);
+        setFormValue('form_wc', `= ${h2_val} - ${h1_val}`);
+        setFormValue('form_qc', `= ${h2_val} - ${h3_val}`);
+        setFormValue('form_cop', `= ${qe} / ${wc}`);
+        setFormValue('form_rc', `= ${pHpAbs.toFixed(1)} / ${pLpAbs.toFixed(1)}`);
+        setFormValue('form_nv', `= 100 - 5 × (${rc.toFixed(1)} - 1)`);
+
+        const setNode = (id, x, y) => {
+            const el = document.getElementById(id);
+            if (el) { el.setAttribute('cx', x); el.setAttribute('cy', y); }
+        };
+        setNode('molN1', x1, yLp);
+        setNode('molN2', x2, yHp);
+        setNode('molN3', x3, yHp);
+        setNode('molN4', x4, yLp);
+
+        // Ubicar Nodos de Saturación en la Campana
+        setNode('molN_sat_vap', Right_X_Lp, yLp);
+        setNode('molN_sat_liq', Left_X_Hp, yHp);
+
+        const setTextPos = (id, x, y) => {
+            const el = document.getElementById(id);
+            if (el) { el.setAttribute('x', x); el.setAttribute('y', y); }
+        };
+        
+        // Prevención estricta de solapamiento alejando los números de los nodos y cotas
+        setTextPos('molT1', x1 + 8, yLp - 8); 
+        setTextPos('molT2', x2 + 8, yHp - 8);
+        setTextPos('molT3', x3 - 10, yHp + 14); 
+        setTextPos('molT4', x4 - 14, yLp + 16);
+
+        // Trazado de las acotaciones de Subenfriamiento y Sobrecalentamiento
+        const dimSH = document.getElementById('molDimSH');
+        if (dimSH) dimSH.setAttribute('d', `M ${Right_X_Lp} ${yLp+8} L ${Right_X_Lp} ${yLp+12} L ${x1} ${yLp+12} L ${x1} ${yLp+8}`);
+        const textSH = document.getElementById('molTextSH_val');
+        if (textSH) {
+            setTextPos('molTextSH_val', (Right_X_Lp + x1)/2, yLp + 22);
+            textSH.textContent = `SH: ${globalSH.toFixed(1)}K`;
+        }
+
+        const dimSC = document.getElementById('molDimSC');
+        if (dimSC) dimSC.setAttribute('d', `M ${x3} ${yHp-8} L ${x3} ${yHp-12} L ${Left_X_Hp} ${yHp-12} L ${Left_X_Hp} ${yHp-8}`);
+        const textSC = document.getElementById('molTextSC_val');
+        if (textSC) {
+            setTextPos('molTextSC_val', (x3 + Left_X_Hp)/2, yHp - 16);
+            textSC.textContent = `SC: ${globalSC.toFixed(1)}K`;
+        }
+
+        const molCycle = document.getElementById('molCycle');
+        if (molCycle) molCycle.setAttribute('points', `${x1},${yLp} ${x2},${yHp} ${x3},${yHp} ${x4},${yLp}`);
+
+        const lineHp = document.getElementById('molLineHp');
+        if (lineHp) { lineHp.setAttribute('y1', yHp); lineHp.setAttribute('y2', yHp); }
+        const lineLp = document.getElementById('molLineLp');
+        if (lineLp) { lineLp.setAttribute('y1', yLp); lineLp.setAttribute('y2', yLp); }
+
+        // Actualización de textos con valores dinámicos
+        const textHp = document.getElementById('molTextHp');
+        if (textHp) { textHp.setAttribute('y', yHp - 5); textHp.textContent = `HP: ${currentHp.toFixed(1)} bar`; }
+        const textLp = document.getElementById('molTextLp');
+        if (textLp) { textLp.setAttribute('y', yLp + 12); textLp.textContent = `LP: ${currentLp.toFixed(1)} bar`; }
+
+        // Inyección de Temperaturas dentro de la Campana
+        const tempHp = document.getElementById('molTempHp');
+        if (tempHp) { tempHp.setAttribute('y', yHp - 4); tempHp.textContent = `Tc: ${strHpT}`; }
+        const tempLp = document.getElementById('molTempLp');
+        if (tempLp) { tempLp.setAttribute('y', yLp - 4); tempLp.textContent = `Te: ${strLpT}`; }
+
+        // Líneas de Temperatura Ambiente e Interior (Saltos Térmicos)
+        let tCamVal = parseFloat(document.getElementById("numTempCamara").value) || 0;
+        let tAmbVal = parseFloat(document.getElementById("numTempAmbiente").value) || 0;
+        
+        let pAmb = getSatPressure(tAmbVal, gasActual);
+        let pCam = getSatPressure(tCamVal, gasActual);
+        
+        let yAmb = getLogY(pAmb);
+        let yCam = getLogY(pCam);
+        
+        yAmb = Math.max(30, Math.min(290, yAmb));
+        yCam = Math.max(30, Math.min(290, yCam));
+
+        const lineText = document.getElementById('molLineText');
+        if (lineText) { lineText.setAttribute('y1', yAmb); lineText.setAttribute('y2', yAmb); }
+        const textText = document.getElementById('molTextText');
+        if (textText) { textText.setAttribute('y', yAmb - 4); textText.textContent = `T.Ext: ${tAmbVal.toFixed(1)}°C`; }
+
+        const lineTint = document.getElementById('molLineTint');
+        if (lineTint) { lineTint.setAttribute('y1', yCam); lineTint.setAttribute('y2', yCam); }
+        const textTint = document.getElementById('molTextTint');
+        if (textTint) { textTint.setAttribute('y', yCam - 4); textTint.textContent = `T.Int: ${tCamVal.toFixed(1)}°C`; }
+
+        // Líneas de Proyección de Entalpía hacia el Eje X
+        const setDrop = (id, x, yTop) => {
+            const el = document.getElementById(id);
+            if (el) { el.setAttribute('x1', x); el.setAttribute('x2', x); el.setAttribute('y1', yTop); }
+        };
+        setDrop('molDrop1', x1, yLp);
+        setDrop('molDrop2', x2, yHp);
+        setDrop('molDrop3', x3, yHp);
+
+        // Textos de Entalpía escalonados en altura (y=312 vs y=324) para evitar solapamientos
+        const setHVal = (id, x, val) => {
+            const el = document.getElementById(id);
+            if (el) { el.setAttribute('x', x); el.textContent = val; }
+        };
+        setHVal('molValH3', x3, h3_val);
+        setHVal('molValH1', x1, h1_val);
+        setHVal('molValH2', x2, h2_val);
+    }
+
+    // =====================================================================
+    // ================= LÓGICA MATEMÁTICA Y ACTUALIZACIÓN UI ==============
+    // =====================================================================
+    function calcular() {
+        const lpCutin = lpAj;
+        const lpCutout = lpAj - lpDif;
+        const hpCutout = hpAj;
+        const hpCutin = hpAj - hpDif;
+
+        const safeSetTextContent = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+        const safeSetText = (id, text) => { 
+            const el = document.getElementById(id); 
+            if (el) {
+                if (el.tagName === 'INPUT') {
+                    // Evitar sobreescribir si el usuario está tipeando activamente
+                    if (document.activeElement !== el) el.value = parseFloat(text).toFixed(1);
+                } else {
+                    el.innerText = text; 
+                }
+            }
+        };
+
+        const formatTemp = (p) => {
+            let t = getSatTemp(p, gasActual);
+            return (t === Infinity) ? '(Transcrítico)' : '(' + t.toFixed(1) + ' °C)';
+        };
+
+        safeSetText("txtLpCutout", lpCutout.toFixed(1));
+        safeSetText("tempLpCutout", formatTemp(lpCutout));
+        safeSetText("txtHpCutin", hpCutin.toFixed(1));
+        safeSetText("tempHpCutin", formatTemp(hpCutin));
+
+        safeSetText("tempLpAj", formatTemp(lpCutin));
+        safeSetText("tempHpAj", formatTemp(hpCutout));
+
+        const elListaFallos = document.getElementById("listaFallos");
+        const falloActual = elListaFallos ? elListaFallos.value : "normal";
+
+        if (currentLp <= lpCutout) estadoLpInterno = false;
+        if (currentLp >= lpCutin) estadoLpInterno = true;
+        
+        if (currentHp >= hpCutout) estadoHpInterno = false;
+        if (currentHp <= hpCutin) estadoHpInterno = true;
+
+        // AVERÍA: Presostatos de control se quedan "pegados" (eléctricamente cerrados)
+        if (falloActual === "fallo_ctrl_lp") estadoLpInterno = true;
+        if (falloActual === "fallo_ctrl_hp") estadoHpInterno = true;
+
+        if (currentLp <= lpSafAj) lpSafTripped = true;
+        if (currentHp >= hpSafAj) hpSafTripped = true;
+
+        let lpTemp = getSatTemp(currentLp, gasActual);
+        let hpTemp = getSatTemp(currentHp, gasActual);
+        let lpState = 'Vapor Sat.'; let hpState = 'Líq. Sat.';
+
+        if (lpTemp === Infinity) { lpTemp = 'N/A'; lpState = 'Transcrítico'; } else { lpTemp = lpTemp.toFixed(1) + ' °C'; }
+        if (hpTemp === Infinity) { hpTemp = 'N/A'; hpState = 'Transcrítico'; } else { hpTemp = hpTemp.toFixed(1) + ' °C'; }
+
+        safeSetText("valLpAj", lpAj.toFixed(1)); safeSetText("valLpDif", lpDif.toFixed(1));
+        safeSetText("valLpPres", currentLp.toFixed(1) + " bar"); safeSetText("valLpTemp", lpTemp); safeSetText("valLpState", lpState);
+        
+        safeSetText("valHpAj", hpAj.toFixed(1)); safeSetText("valHpDif", hpDif.toFixed(1));
+        safeSetText("valHpPres", currentHp.toFixed(1) + " bar"); safeSetText("valHpTemp", hpTemp); safeSetText("valHpState", hpState);
+
+        const btnLp = document.getElementById("btnResetLpSaf");
+        if (btnLp) {
+            if (lpSafTripped) {
+                if (currentLp >= lpSafAj + lpSafDiff) {
+                    btnLp.className = "danfoss-reset-btn ready"; btnLp.disabled = false; btnLp.title = "Pulsar para rearmar";
+                } else {
+                    btnLp.className = "danfoss-reset-btn tripped"; btnLp.disabled = true; btnLp.title = `Esperar > ${(lpSafAj + lpSafDiff).toFixed(1)} bar`;
+                }
+            } else {
+                btnLp.className = "danfoss-reset-btn normal"; btnLp.disabled = true; btnLp.title = "Normal";
+            }
+        }
+
+        const btnHp = document.getElementById("btnResetHpSaf");
+        if (btnHp) {
+            if (hpSafTripped) {
+                if (currentHp <= hpSafAj - hpSafDiff) {
+                    btnHp.className = "danfoss-reset-btn ready"; btnHp.disabled = false; btnHp.title = "Pulsar para rearmar";
+                } else {
+                    btnHp.className = "danfoss-reset-btn tripped"; btnHp.disabled = true; btnHp.title = `Esperar < ${(hpSafAj - hpSafDiff).toFixed(1)} bar`;
+                }
+            } else {
+                btnHp.className = "danfoss-reset-btn normal"; btnHp.disabled = true; btnHp.title = "Normal";
+            }
+        }
+
+        safeSetText('txtLpSaf', lpSafAj.toFixed(1));
+        safeSetText('txtHpSaf', hpSafAj.toFixed(1));
+
+        const displayLp = document.getElementById("displayLpContainer");
+        if (displayLp) { if (!estadoLpInterno || lpSafTripped) displayLp.classList.add("tripped"); else displayLp.classList.remove("tripped"); }
+        const displayHp = document.getElementById("displayHpContainer");
+        if (displayHp) { if (!estadoHpInterno || hpSafTripped) displayHp.classList.add("tripped"); else displayHp.classList.remove("tripped"); }
+
+        const updateSPDT = (idEstado, idBornes, idLed, isTripped) => {
+            const badge = document.getElementById(idEstado);
+            const bornes = document.getElementById(idBornes);
+            const led = document.getElementById(idLed);
+            if (badge && bornes && led) {
+                if (isTripped) {
+                    badge.innerText = "ABIERTO (CORTE)"; badge.style.color = "#ef4444";
+                    bornes.innerText = "1 ➔ 2 (Alarma)"; bornes.style.color = "#ef4444";
+                    led.className = "alarm-led on";
+                } else {
+                    badge.innerText = "CERRADO (OK)"; badge.style.color = "#16a34a";
+                    bornes.innerText = "1 ➔ 4 (Motor)"; bornes.style.color = "#16a34a";
+                    led.className = "alarm-led off";
+                }
+            }
+        };
+        updateSPDT("estadoSafLp", "bornesSafLp", "ledSafLp", lpSafTripped);
+        updateSPDT("estadoSafHp", "bornesSafHp", "ledSafHp", hpSafTripped);
+
+        moverPunteroVisual('ptrLpAj', lpAj, pLim.lpAj.t, pLim.lpAj.b);
+        moverPunteroVisual('ptrLpDif', lpDif, pLim.lpDif.t, pLim.lpDif.b);
+        moverPunteroVisual('ptrHpAj', hpAj, pLim.hpAj.t, pLim.hpAj.b);
+        moverPunteroVisual('ptrHpDif', hpDif, pLim.hpDif.t, pLim.hpDif.b);
+        moverPunteroVisual('ptrLpSaf', lpSafAj, pLim.lpSaf.t, pLim.lpSaf.b);
+        moverPunteroVisual('ptrHpSaf', hpSafAj, pLim.hpSaf.t, pLim.hpSaf.b);
+
+        const panelGlobal = document.getElementById("estadoGlobal");
+        const motivo = document.getElementById("motivoCorte");
+        
+        const isLpClear = (estadoLpInterno && !lpSafTripped) || bypassLpActivo;
+        const isHpClear = (estadoHpInterno && !hpSafTripped) || bypassHpActivo;
+        
+        // FIX 2.1: El compresor quemado anula el flujo eléctrico definitivamente
+        const compresorActivoElectricamente = isLpClear && isHpClear && (falloActual !== "valvulas_rotas") && (falloActual !== "quemado");
+
+        if (panelGlobal && motivo) {
+            const textoPrin = document.getElementById("estadoTextoPrincipal");
+            panelGlobal.style.backgroundColor = "";
+            panelGlobal.style.boxShadow = "";
+            
+            if (compresorActivoElectricamente) {
+                panelGlobal.className = "status-panel on";
+                if(textoPrin) textoPrin.innerText = "⚡ COMPRESOR FUNCIONANDO";
+                
+                if (bypassLpActivo || bypassHpActivo) {
+                    panelGlobal.style.backgroundColor = "var(--status-warning)";
+                    panelGlobal.style.boxShadow = "0 5px 15px -3px rgba(251, 191, 36, 0.3)";
+                    
+                    // FIX 2.1: Alarma de Daño Inminente
+                    let dangerText = "";
+                    if (damageCounter > 0) {
+                        let secondsLeft = ((MAX_DAMAGE - damageCounter) * 0.05).toFixed(1);
+                        dangerText = ` <span style="color: #ef4444; font-weight: 900; background: rgba(0,0,0,0.2); padding: 2px 5px; border-radius: 4px;">¡PELIGRO INMINENTE! DAÑO EN ${secondsLeft}s</span>`;
+                    }
+                    
+                    motivo.innerHTML = "⚠️ ATENCIÓN: FUNCIONAMIENTO FORZADO POR PUENTE MANUAL." + dangerText;
+                    if (bypassHpActivo) panelGlobal.style.backgroundColor = "var(--status-danger)";
+                } else {
+                    motivo.innerText = "Circuitos de seguridad (1➔4) cerrados. Presiones correctas.";
+                }
+            } else {
+                panelGlobal.className = "status-panel off";
+                if(textoPrin) textoPrin.innerText = "🛑 COMPRESOR DETENIDO (Fallo/Corte)";
+                
+                if (falloActual === "quemado") {
+                    panelGlobal.style.backgroundColor = "#000000"; 
+                    panelGlobal.style.boxShadow = "0 5px 15px -3px rgba(0, 0, 0, 0.5)";
+                    if(textoPrin) { textoPrin.innerText = "💥 COMPRESOR DESTRUIDO"; textoPrin.style.color = "#ef4444"; }
+                    motivo.innerHTML = "<span style='color: #ef4444;'>Motor fundido por operar fuera de límites mediante Bypass manual. Requiere reinicio.</span>";
+                }
+                else if (hpSafTripped) motivo.innerText = "🔒 BLOQUEO POR SEGURIDAD ALTA PRESIÓN. Bornes en [1➔2]. Requiere Rearme Manual.";
+                else if (lpSafTripped) motivo.innerText = "🔒 BLOQUEO POR SEGURIDAD BAJA PRESIÓN. Bornes en [1➔2]. Requiere Rearme Manual.";
+                else if (!estadoLpInterno && !estadoHpInterno) motivo.innerText = "Corte Dual: Ambos presostatos han abierto el circuito.";
+                else if (!estadoLpInterno) motivo.innerText = "Corte por BAJA PRESIÓN (El circuito de regulación está abierto en LP).";
+                else if (!estadoHpInterno) motivo.innerText = "Corte por ALTA PRESIÓN (El circuito de regulación está abierto en HP).";
+                else if (falloActual === "valvulas_rotas") motivo.innerText = "Fallo Mecánico: El compresor está funcionando pero no desplaza volumen.";
+            }
+        }
+
+        isCompressorOn = compresorActivoElectricamente;
+
+        // CÁLCULO DE RECALENTAMIENTO (SH) Y SUBENFRIAMIENTO (SC)
+        let chFactor = cargaRefrigerante / 100.0;
+        let actualSH = Math.max(0, 8.0 + (1.0 - chFactor) * 15.0);
+        let actualSC = Math.max(0, 5.0 + (chFactor - 1.0) * 10.0);
+        
+        if (falloActual === "evap_hielo") { actualSH = 2.0; } 
+        if (falloActual === "obstruccion") { actualSH += 20; actualSC += 15; } 
+        if (falloActual === "cond_sucio" || falloActual === "ven_roto") { actualSC = 0.5; } 
+        if (falloActual === "carga_termica") { actualSH += 12.0; }
+        
+        // MODIFICADORES NUEVAS AVERÍAS
+        if (falloActual === "vet_abierta") { actualSH = 0.0; }
+        if (falloActual === "vet_cerrada") { actualSH += 25.0; actualSC += 5.0; }
+        if (falloActual === "humedad") { actualSH += 15.0; } 
+        if (falloActual === "ven_evap_roto") { actualSH = 1.0; } 
+        if (falloActual === "incondensables") { actualSC = 1.5; } 
+        if (falloActual === "aislamiento_malo") { actualSH += 20.0; } 
+
+        globalSH = actualSH;
+        globalSC = actualSC;
+
+        let tSuc = (lpTemp === 'N/A' ? '--' : (parseFloat(lpTemp) + actualSH).toFixed(1));
+        let tLiq = (hpTemp === 'N/A' ? '--' : (parseFloat(hpTemp) - actualSC).toFixed(1));
+
+        safeSetTextContent("svgLpVal", `LP: ${currentLp.toFixed(1)}`);
+        safeSetTextContent("svgLpSet", `In: ${lpCutin.toFixed(1)} | Out: ${lpCutout.toFixed(1)}`);
+        safeSetTextContent("svgLineSuc_P", `${currentLp.toFixed(1)} bar`);
+        safeSetTextContent("svgLineSuc_SH", `SH: ${actualSH.toFixed(1)}K (${tSuc}°C)`);
+
+        safeSetTextContent("svgHpVal", `HP: ${currentHp.toFixed(1)}`);
+        safeSetTextContent("svgHpSet", `Out: ${hpCutout.toFixed(1)} | In: ${hpCutin.toFixed(1)}`);
+        safeSetTextContent("svgLineLiq_P", `${currentHp.toFixed(1)} bar`);
+        safeSetTextContent("svgLineLiq_SC", `SC: ${actualSC.toFixed(1)}K (${tLiq}°C)`);
+
+        // EVALUACIÓN INTELIGENTE DE LOS AJUSTES (PILOTOS)
+        const updatePilot = (id, state, msg) => {
+            const p = document.getElementById(id);
+            if(!p) return;
+            p.className = "pilot-status " + (state === 0 ? "pilot-good" : (state === 1 ? "pilot-warn" : "pilot-bad"));
+            p.title = msg;
+        };
+
+        // Control LP: diff 0.5 a 2.5
+        if (lpDif < 0.5) updatePilot('pilot-ctrl-lp', 1, '⚠️ Diff muy bajo: Riesgo de arranques y paradas constantes (Penduleo).');
+        else if (lpDif > 2.5) updatePilot('pilot-ctrl-lp', 2, '🔴 Diff muy alto: Fluctuación térmica extrema y resecado del producto.');
+        else updatePilot('pilot-ctrl-lp', 0, '✅ Diferencial LP óptimo (Ciclos de trabajo adecuados).');
+
+        // Control HP: diff 2.0 a 4.5
+        if (hpDif < 2.0) updatePilot('pilot-ctrl-hp', 1, '⚠️ Diff muy bajo: Los ventiladores arrancarán y pararán ametrallando contactores.');
+        else if (hpDif > 4.5) updatePilot('pilot-ctrl-hp', 2, '🔴 Diff muy alto: Presión de líquido inestable (la Válvula de Expansión cazará).');
+        else updatePilot('pilot-ctrl-hp', 0, '✅ Diferencial HP óptimo (Control estable de condensación).');
+
+        // Seguridad LP: 0.3 a 1.5 por debajo de Cut-out, siempre > 0 bar
+        let distLp = lpCutout - lpSafAj;
+        if (lpSafAj <= 0) updatePilot('pilot-saf-lp', 2, '🔴 PELIGRO: Ajuste en vacío. Riesgo grave de aspirar aire/humedad y quemar el motor.');
+        else if (distLp < 0.3) updatePilot('pilot-saf-lp', 1, '⚠️ Muy cerca del control de Parada: Riesgo de disparos falsos de seguridad.');
+        else if (distLp > 1.5) updatePilot('pilot-saf-lp', 1, '⚠️ Muy lejos del control: Podría no actuar a tiempo para proteger el compresor.');
+        else updatePilot('pilot-saf-lp', 0, '✅ Margen de Seguridad LP óptimo y sin riesgo de vacío.');
+
+        // Seguridad HP: 2.0 a 6.0 por encima de Cut-out
+        let distHp = hpSafAj - hpCutout;
+        if (distHp < 2.0) updatePilot('pilot-saf-hp', 1, '⚠️ Muy cerca del control: Riesgo de disparos falsos en los días calurosos.');
+        else if (distHp > 6.0) updatePilot('pilot-saf-hp', 2, '🔴 PELIGRO: Demasiado alto. Riesgo de superar la Presión Máxima de Servicio (PS).');
+        else updatePilot('pilot-saf-hp', 0, '✅ Margen de Seguridad HP óptimo.');
+
+
+        // CÁLCULO DE SALTO TÉRMICO (Delta T) REAL
+        let tCam = parseFloat(document.getElementById("numTempCamara").value) || 0;
+        let tAmb = parseFloat(document.getElementById("numTempAmbiente").value) || 0;
+        let deltaEvap = tCam - (lpTemp === 'N/A' ? 0 : parseFloat(lpTemp));
+        let deltaCond = (hpTemp === 'N/A' ? 0 : parseFloat(hpTemp)) - tAmb;
+        
+        let strDeltaEvap = (lpTemp === 'N/A') ? '--' : deltaEvap.toFixed(1) + ' K';
+        let strDeltaCond = (hpTemp === 'N/A') ? '--' : deltaCond.toFixed(1) + ' K';
+
+        safeSetTextContent("svgTextCam", `T. Int: ${tCam}°C | ΔT: ${strDeltaEvap}`);
+        safeSetTextContent("svgTextAmb", `T. Ext: ${tAmb}°C | ΔT: ${strDeltaCond}`);
+
+        const svgLpRect = document.getElementById("svgLpRect");
+        if (svgLpRect) svgLpRect.setAttribute("fill", estadoLpInterno ? "#1e293b" : "#ef4444");
+        const svgHpRect = document.getElementById("svgHpRect");
+        if (svgHpRect) svgHpRect.setAttribute("fill", estadoHpInterno ? "#1e293b" : "#ef4444");
+
+        const svgCompText = document.getElementById("svgCompText");
+        if (svgCompText) {
+            if (isCompressorOn) {
+                svgCompText.textContent = "Compresor (ON)"; svgCompText.setAttribute("fill", "#16a34a");
+            } else {
+                svgCompText.textContent = "Compresor (OFF)"; svgCompText.setAttribute("fill", "#ef4444");
+            }
+        }
+
+        updatePressureBars();
+        updateMollier();
+    }
+
+    function createParticles(count) {
+        const pCont = document.getElementById('particleContainer');
+        if (!pCont) return;
+        while (pCont.firstChild) {
+            pCont.removeChild(pCont.firstChild);
+        }
+        particles.length = 0;
+        for (let i = 0; i < count; i++) {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('r', '4'); circle.distance = (i * pathLength / count);
+            pCont.appendChild(circle); particles.push(circle);
+        }
+    }
+
+    function updateParticleCount(newCount) {
+        const pCont = document.getElementById('particleContainer');
+        if (!pCont) return;
+        if (newCount < 0) newCount = 0;
+        if (newCount === particles.length) return;
+
+        if (newCount > particles.length) {
+            let toAdd = newCount - particles.length;
+            for (let i = 0; i < toAdd; i++) {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('r', '4'); 
+                circle.distance = Math.random() * pathLength; 
+                pCont.appendChild(circle); 
+                particles.push(circle);
+            }
+        } else {
+            let toRemove = particles.length - newCount;
+            for (let i = 0; i < toRemove; i++) {
+                const circle = particles.pop();
+                if(circle && circle.parentNode === pCont) {
+                    pCont.removeChild(circle);
+                }
+            }
+        }
+    }
+
+    function animate(time) {
+        if (isPaused) { animationFrameId = requestAnimationFrame(animate); return; }
+        if (!particleContainer || !pistonAssembly || !valveDischarge || !valveLiquid || !valveSuction) {
+            animationFrameId = requestAnimationFrame(animate); return;
+        }
+
+        if (isCompressorOn) {
+            const isDischargeClosed = valveDischarge.classList.contains('closed');
+            const isLiquidClosed = valveLiquid.classList.contains('closed');
+            const isSuctionClosed = valveSuction.classList.contains('closed');
+
+            const currentDistances = particles.map(p => p.distance);
+
+            particles.forEach((particle, index) => {
+                let calculatedSpeed = 1.0; let maxAllowedMovement = calculatedSpeed;
+
+                const checkValveBlock = (isClosed, valvePos) => {
+                    if (isClosed) {
+                        const distanceToValve = (valvePos - currentDistances[index] + pathLength) % pathLength;
+                        if (distanceToValve <= maxAllowedMovement) maxAllowedMovement = Math.max(0, distanceToValve - 0.1);
+                        else if (distanceToValve > pathLength - 5.0) maxAllowedMovement = 0;
+                    }
+                };
+                checkValveBlock(isDischargeClosed, valveDischargePos);
+                checkValveBlock(isLiquidClosed, valveLiquidPos);
+                checkValveBlock(isSuctionClosed, valveSuctionPos);
+
+                // --- OPTIMIZACIÓN DE RENDIMIENTO O(N) ---
+                let nextIndex = (index + 1) % particles.length;
+                let distanceToNext = (currentDistances[nextIndex] - currentDistances[index] + pathLength) % pathLength;
+                
+                if (distanceToNext > 0 && distanceToNext < pathLength / 2) {
+                    const movementToNext = distanceToNext - 8.0; 
+                    if (movementToNext < maxAllowedMovement) {
+                        maxAllowedMovement = Math.max(0, movementToNext);
+                    }
+                }
+
+                if (maxAllowedMovement < 0) maxAllowedMovement = 0;
+                particle.distance = (currentDistances[index] + maxAllowedMovement) % pathLength;
+            });
+
+            particles.forEach(particle => {
+                const point = animPath.getPointAtLength(particle.distance);
+                particle.setAttribute('cx', point.x); particle.setAttribute('cy', point.y);
+                if (particle.distance < condenserExit) particle.setAttribute('fill', '#ef4444');
+                else if (particle.distance < expansionValvePos) particle.setAttribute('fill', '#3b82f6');
+                else if (particle.distance < evaporatorExit) particle.setAttribute('fill', '#f97316');
+                else particle.setAttribute('fill', '#94a3b8');
+            });
+
+            pistonAssembly.setAttribute('transform', `translate(${Math.sin(time / 200) * -5}, 0)`);
+        } else {
+            pistonAssembly.setAttribute('transform', 'translate(0, 0)');
+        }
+        animationFrameId = requestAnimationFrame(animate);
+    }
+
+    function actualizarAnimacion(fallo) {
+        let targetCount = Math.floor(40 * (cargaRefrigerante / 100));
+        updateParticleCount(targetCount);
+    }
+
+    // =====================================================================
+    // ================= DRAG & DROP FOTORREALISTA =========================
+    // =====================================================================
+    function makeDraggable(slotId, varName) {
+        const slot = document.getElementById(slotId);
+        if(!slot) return;
+        let isDragging = false;
+
+        function updateValue(clientY) {
+            const rect = slot.getBoundingClientRect();
+            let percentage = 1 - (clientY - rect.top) / rect.height; 
+            percentage = Math.max(0, Math.min(1, percentage));
+            
+            let lim = pLim[varName];
+            let val = lim.b + percentage * (lim.t - lim.b);
+            val = Math.round(val / lim.s) * lim.s;
+            val = Math.max(Math.min(lim.t, lim.b), Math.min(Math.max(lim.t, lim.b), val));
+
+            if (varName === 'lpAj') lpAj = val;
+            else if (varName === 'lpDif') lpDif = val;
+            else if (varName === 'hpAj') hpAj = val;
+            else if (varName === 'hpDif') hpDif = val;
+            else if (varName === 'lpSafAj') lpSafAj = val;
+            else if (varName === 'hpSafAj') hpSafAj = val;
+            calcular(); 
+        }
+
+        slot.addEventListener('mousedown', (e) => { isDragging = true; updateValue(e.clientY); });
+        window.addEventListener('mousemove', (e) => { if (isDragging) updateValue(e.clientY); });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        slot.addEventListener('touchstart', (e) => { isDragging = true; updateValue(e.touches[0].clientY); e.preventDefault(); }, {passive: false});
+        window.addEventListener('touchmove', (e) => { if (isDragging) { updateValue(e.touches[0].clientY); e.preventDefault(); } }, {passive: false});
+        window.addEventListener('touchend', () => { isDragging = false; });
+    }
+    
+    function bindInputToVar(inputId, varName) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.addEventListener('change', (e) => {
+            let val = parseFloat(e.target.value);
+            if (isNaN(val)) return;
+            const lim = pLim[varName];
+            val = clampVal(val, lim.t, lim.b);
+            
+            // FIX 2.2: Forzar actualización visual instantánea al valor sanitizado para evitar bugs de UI
+            e.target.value = val.toFixed(1); 
+            
+            if (varName === 'lpAj') lpAj = val;
+            else if (varName === 'lpDif') lpDif = val;
+            else if (varName === 'hpAj') hpAj = val;
+            else if (varName === 'hpDif') hpDif = val;
+            else if (varName === 'lpSafAj') lpSafAj = val;
+            else if (varName === 'hpSafAj') hpSafAj = val;
+            
+            calcular();
+        });
+    }
+
+    function makeBarMarkerDraggable(markerId, type) {
+        const marker = document.getElementById(markerId);
+        const bar = document.getElementById('pressure-bar-bg');
+        if(!marker || !bar) return;
+        let isDragging = false;
+
+        function updateValueFromClientX(clientX) {
+            const rect = bar.getBoundingClientRect();
+            let percentage = (clientX - rect.left) / rect.width;
+            percentage = Math.max(0, Math.min(1, percentage));
+            
+            const minP = RefData[gasActual].barMin;
+            const maxP = RefData[gasActual].barMax;
+            let val = minP + percentage * (maxP - minP);
+            
+            const step = (type.includes('hp')) ? 0.5 : 0.1;
+            val = Math.round(val / step) * step;
+
+            if (type === 'lpSaf') lpSafAj = clampVal(val, pLim.lpSaf.t, pLim.lpSaf.b);
+            else if (type === 'hpSaf') hpSafAj = clampVal(val, pLim.hpSaf.t, pLim.hpSaf.b);
+            else if (type === 'lpIn') lpAj = clampVal(val, pLim.lpAj.t, pLim.lpAj.b);
+            else if (type === 'lpOut') lpDif = clampVal(lpAj - val, pLim.lpDif.t, pLim.lpDif.b);
+            else if (type === 'hpOut') hpAj = clampVal(val, pLim.hpAj.t, pLim.hpAj.b);
+            else if (type === 'hpIn') hpDif = clampVal(hpAj - val, pLim.hpDif.t, pLim.hpDif.b);
+            
+            calcular();
+        }
+
+        marker.addEventListener('mousedown', (e) => { isDragging = true; e.stopPropagation(); });
+        window.addEventListener('mousemove', (e) => { if (isDragging) updateValueFromClientX(e.clientX); });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        marker.addEventListener('touchstart', (e) => { isDragging = true; e.stopPropagation(); }, {passive: false});
+        window.addEventListener('touchmove', (e) => { if (isDragging) { updateValueFromClientX(e.touches[0].clientX); e.preventDefault(); } }, {passive: false});
+        window.addEventListener('touchend', () => { isDragging = false; });
+    }
+
+    // =====================================================================
+    // ================= INICIALIZACIÓN SEGURA Y MOTOR DE FÍSICAS ==========
+    // =====================================================================
+    window.onload = function() {
+        particleContainer = document.getElementById('particleContainer');
+        pistonAssembly = document.getElementById('pistonAssembly');
+        valveDischarge = document.getElementById('valveDischarge');
+        valveLiquid = document.getElementById('valveLiquid');
+        valveSuction = document.getElementById('valveSuction');
+        allValves = document.querySelectorAll('.valve-instance');
+        
+        if (allValves) {
+            allValves.forEach(valve => {
+                valve.addEventListener('click', () => { 
+                    valve.classList.toggle('open'); 
+                    valve.classList.toggle('closed'); 
+                    aplicarFallo(); 
+                });
+            });
+        }
+
+        makeDraggable('slotLpAj', 'lpAj');
+        makeDraggable('slotLpDif', 'lpDif');
+        makeDraggable('slotHpAj', 'hpAj');
+        makeDraggable('slotHpDif', 'hpDif'); 
+        makeDraggable('slotLpSaf', 'lpSafAj');
+        makeDraggable('slotHpSaf', 'hpSafAj');
+
+        bindInputToVar('txtLpSaf', 'lpSafAj');
+        bindInputToVar('valLpAj', 'lpAj');
+        bindInputToVar('valLpDif', 'lpDif');
+        bindInputToVar('valHpAj', 'hpAj');
+        bindInputToVar('valHpDif', 'hpDif'); 
+        bindInputToVar('txtHpSaf', 'hpSafAj');
+
+        makeBarMarkerDraggable('cal-lp-saf', 'lpSaf');
+        makeBarMarkerDraggable('cal-hp-saf', 'hpSaf');
+        makeBarMarkerDraggable('cal-lp-in', 'lpIn');
+        makeBarMarkerDraggable('cal-lp-out', 'lpOut');
+        makeBarMarkerDraggable('cal-hp-out', 'hpOut');
+        makeBarMarkerDraggable('cal-hp-in', 'hpIn');
+
+        const setupBypass = (id, type) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const activate = (e) => { 
+                e.preventDefault(); 
+                if (type === 'lp') bypassLpActivo = true; 
+                if (type === 'hp') bypassHpActivo = true; 
+                btn.classList.add('active');
+                calcular(); 
+            };
+            const deactivate = (e) => { 
+                e.preventDefault(); 
+                if (type === 'lp') bypassLpActivo = false; 
+                if (type === 'hp') bypassHpActivo = false; 
+                btn.classList.remove('active');
+                calcular(); 
+            };
+            btn.addEventListener('mousedown', activate);
+            btn.addEventListener('touchstart', activate, {passive: false});
+            btn.addEventListener('mouseup', deactivate);
+            btn.addEventListener('mouseleave', deactivate);
+            btn.addEventListener('touchend', deactivate);
+        };
+        setupBypass('btnBypassLp', 'lp');
+        setupBypass('btnBypassHp', 'hp');
+
+        initPresostatosDropdowns(gasActual, true); // Inicializar desplegables
+        drawBell();
+        createParticles(40);
+        cambiarRefrigerante(); 
+        initMollierZoom(); // Inicializar control de Pan y Zoom
+        animationFrameId = requestAnimationFrame(animate);
+
+        // --- ARQUITECTURA: Motor de Físicas Encapsulado ---
+        const PhysicsEngine = {
+            tick: function() {
+                if (isPaused) return; 
+
+                let targetLp = isCompressorOn ? opLpTarget : eqPressure;
+                let targetHp = isCompressorOn ? opHpTarget : eqPressure;
+
+                // FÍSICA DE VÁLVULAS
+                const isDischargeClosed = valveDischarge && valveDischarge.classList.contains('closed');
+                const isLiquidClosed = valveLiquid && valveLiquid.classList.contains('closed');
+                const isSuctionClosed = valveSuction && valveSuction.classList.contains('closed');
+
+                // SISTEMA DE DAÑO POR BYPASS MANUAL
+                if (isCompressorOn && (bypassLpActivo || bypassHpActivo)) {
+                    let isDamaging = false;
+                    if (currentLp < 0.0) isDamaging = true; 
+                    if (currentHp > (pLim.hpSaf.b * 0.95)) isDamaging = true; 
+
+                    if (isDamaging) {
+                        damageCounter++;
+                        if (damageCounter >= MAX_DAMAGE && document.getElementById("listaFallos").value !== "quemado") {
+                            bypassLpActivo = false; bypassHpActivo = false;
+                            document.getElementById('btnBypassLp').classList.remove('active');
+                            document.getElementById('btnBypassHp').classList.remove('active');
+                            
+                            const selFallo = document.getElementById("listaFallos");
+                            selFallo.value = "quemado";
+                            const optQuemado = Array.from(selFallo.options).find(o => o.value === 'quemado');
+                            if (optQuemado) optQuemado.style.display = 'block';
+                            
+                            aplicarFallo();
+                        }
+                    } else {
+                        if (damageCounter > 0) damageCounter--;
+                    }
+                } else {
+                    if (damageCounter > 0) damageCounter--;
+                }
+
+                if (isCompressorOn) {
+                    if (isDischargeClosed) { targetHp = 40.0 * pFactor; targetLp = targetLp + 1.0; } 
+                    else if (isSuctionClosed) { targetLp = -0.9 * pFactor; targetHp = targetHp * 0.5; } 
+                    else if (isLiquidClosed) { targetLp = -0.8 * pFactor; targetHp = targetHp * 0.9; }
+                } else {
+                    if (isLiquidClosed || isSuctionClosed || isDischargeClosed) { targetLp = currentLp; targetHp = currentHp; }
+                }
+
+                // INYECCIÓN DE PERTURBACIONES (Incondensables, Fluctuaciones)
+                if (isCompressorOn && !isDischargeClosed && !isSuctionClosed && !isLiquidClosed) {
+                    if (Math.abs(currentLp - targetLp) < 0.2) targetLp += (Math.random() - 0.5) * 0.15;
+                    if (Math.abs(currentHp - targetHp) < 0.5) targetHp += (Math.random() - 0.5) * 0.4;
+                    const elListaFallos = document.getElementById("listaFallos");
+                    if (elListaFallos && elListaFallos.value === "incondensables") targetHp += (Math.random() - 0.5) * 5.0;
+                }
+
+                let diffLp = targetLp - currentLp;
+                let diffHp = targetHp - currentHp;
+
+                let stepLp = 0.05 * pFactor; 
+                let stepHp = 0.20 * pFactor;  
+
+                if (isCompressorOn) {
+                    if (isDischargeClosed) stepHp = 1.0 * pFactor; 
+                    if (isSuctionClosed) stepLp = 0.15 * pFactor; 
+                    if (isLiquidClosed && !isSuctionClosed) stepLp = 0.015 * pFactor; 
+                }
+
+                let changed = false;
+                if (Math.abs(diffLp) > 0.02) { currentLp += Math.sign(diffLp) * Math.min(stepLp, Math.abs(diffLp)); changed = true; }
+                if (Math.abs(diffHp) > 0.02) { currentHp += Math.sign(diffHp) * Math.min(stepHp, Math.abs(diffHp)); changed = true; }
+                if (changed) calcular();
+            }
+        };
+
+        // Bucle principal vinculado al motor
+        setInterval(PhysicsEngine.tick, 50);
+    };
+
+    // =====================================================================
+    // ================= PAN & ZOOM INTERACTIVO EN DIAGRAMA MOLLIER ========
+    // =====================================================================
+    let molScale = 1;
+    let molPanX = 0;
+    let molPanY = 0;
+    let molIsDragging = false;
+    let molLastPt = null;
+
+    function initMollierZoom() {
+        const overlay = document.getElementById('mollierOverlay');
+        const diagram = document.getElementById('mollierDiagram');
+        
+        if (!overlay || !diagram) return;
+
+        overlay.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = 1.1;
+            const direction = e.deltaY > 0 ? -1 : 1;
+            const scaleChange = direction > 0 ? zoomFactor : (1 / zoomFactor);
+            const newScale = Math.max(0.5, Math.min(10, molScale * scaleChange));
+            
+            const pt = getLocalMousePosition(e, diagram);
+            // Hacer zoom hacia el punto donde está el ratón
+            molPanX = pt.x - (pt.x - molPanX) * (newScale / molScale);
+            molPanY = pt.y - (pt.y - molPanY) * (newScale / molScale);
+            molScale = newScale;
+            updateMolTransform();
+        }, { passive: false });
+
+        overlay.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            // Nuevo: Botón central del ratón (rueda) para restablecer (Zoom Todo)
+            if (e.button === 1) {
+                if (typeof window.molReset === 'function') window.molReset();
+                return;
+            }
+            // Botón izquierdo para arrastrar (Pan)
+            if (e.button === 0) {
+                molIsDragging = true;
+                molLastPt = getLocalMousePosition(e, diagram);
+                overlay.style.cursor = 'grabbing';
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!molIsDragging) return;
+            const pt = getLocalMousePosition(e, diagram);
+            molPanX += pt.x - molLastPt.x;
+            molPanY += pt.y - molLastPt.y;
+            molLastPt = pt;
+            updateMolTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (molIsDragging) {
+                molIsDragging = false;
+                overlay.style.cursor = 'grab';
+            }
+        });
+        
+        overlay.addEventListener('mouseleave', () => {
+            if (molIsDragging) {
+                molIsDragging = false;
+                overlay.style.cursor = 'grab';
+            }
+        });
+
+        // Soporte Táctil (Móviles y Tablets)
+        overlay.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                molIsDragging = true;
+                molLastPt = getLocalMousePosition(e.touches[0], diagram);
+            }
+        }, { passive: false });
+        
+        window.addEventListener('touchmove', (e) => {
+            if (!molIsDragging || e.touches.length !== 1) return;
+            e.preventDefault();
+            const pt = getLocalMousePosition(e.touches[0], diagram);
+            molPanX += pt.x - molLastPt.x;
+            molPanY += pt.y - molLastPt.y;
+            molLastPt = pt;
+            updateMolTransform();
+        }, { passive: false });
+
+        window.addEventListener('touchend', () => {
+            molIsDragging = false;
+        });
+    }
+
+    function getLocalMousePosition(e, targetElement) {
+        const svg = targetElement.ownerSVGElement || targetElement;
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        return pt.matrixTransform(targetElement.getScreenCTM().inverse());
+    }
+
+    function updateMolTransform() {
+        const g = document.getElementById('mollierTransform');
+        if (g) g.setAttribute('transform', `translate(${molPanX}, ${molPanY}) scale(${molScale})`);
+    }
+
+    // Funciones enlazadas a los botones visuales (HTML UI en SVG)
+    window.molZoomClick = function(direction) {
+        const newScale = Math.max(0.5, Math.min(10, molScale * (direction > 0 ? 1.25 : (1 / 1.25))));
+        // Zoom desde el centro del diagrama
+        const centerX = 160; 
+        const centerY = 180;
+        
+        molPanX = centerX - (centerX - molPanX) * (newScale / molScale);
+        molPanY = centerY - (centerY - molPanY) * (newScale / molScale);
+        molScale = newScale;
+        updateMolTransform();
+    };
+
+    window.molReset = function() {
+        molScale = 1; molPanX = 0; molPanY = 0;
+        updateMolTransform();
+    };
+
+    // =====================================================================
+    // ================= EVENTOS GLOBALES DE TECLADO =======================
+    // =====================================================================
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            // 1. Salir del modo expandido del Ciclo (Mollier)
+            const panel = document.getElementById("panelCiclo");
+            const btn = document.getElementById("btnFullscreen");
+            if (panel && panel.classList.contains("fullscreen")) {
+                panel.classList.remove("fullscreen");
+                if (btn) btn.innerHTML = "⛶ Expandir";
+                document.body.style.overflow = "auto";
+            }
+            
+            // 2. Salir del modo Pantalla Completa del navegador
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(err => console.log(err));
+            }
+        }
+    });
+
+</script>
+</body>
+</html>
