@@ -2,7 +2,8 @@
 <html lang="es" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- FIX 1: Forzar permisos de ampliación táctil (Zoom) en móviles -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Simulador Avanzado Danfoss (Alta y Baja)</title>
     <!-- FUENTES ACTUALIZADAS -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Condensed:wght@400;600;800&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
@@ -95,9 +96,10 @@
             --svg-comp: #991b1b;
         }
 
+        /* FIX 1: Eliminado overflow-x: hidden; para restaurar el Pinch-to-Zoom nativo */
         body { 
             font-family: var(--font-primary); background-color: var(--bg-app); 
-            padding: 20px; color: var(--text-primary); margin: 0; min-height: 100vh; overflow-x: hidden;
+            padding: 20px; color: var(--text-primary); margin: 0; min-height: 100vh;
         }
 
         body::before, body::after { content: ''; position: fixed; border-radius: 50%; filter: blur(80px); z-index: -1; pointer-events: none; }
@@ -449,6 +451,56 @@
             /* Ajustar SVG para dejar espacio a la botonera inferior */
             .svg-container { max-height: 65vh; }
             .ciclo-panel.fullscreen .svg-container { max-height: 75vh; }
+
+            /* ========================================================================= */
+            /* FIX 2: REESTRUCTURACIÓN DE PRESOSTATOS PARA EVITAR DESBORDAMIENTO VERTICAL */
+            /* Se pasan los componentes visuales a la izquierda, y los controles a la derecha */
+            /* ========================================================================= */
+            
+            .columna-presostato {
+                display: grid !important;
+                grid-template-columns: min-content 1fr;
+                gap: 5px 15px;
+                padding: 15px !important;
+                align-items: center;
+            }
+            .columna-presostato > h3 { grid-column: 1 / -1; margin: 0 0 2px 0; text-align: left; }
+            .columna-presostato > select { grid-column: 1 / -1; margin: 0 0 5px 0; width: 100%; max-width: none !important; }
+            
+            .columna-presostato > .danfoss-casing { 
+                grid-column: 1; 
+                grid-row: 3 / span 3; 
+                transform: scale(0.75); 
+                transform-origin: center left; 
+                margin: -25px -45px -25px 0 !important; /* Compensa la reducción de escala para no dejar huecos */
+            }
+            
+            /* Cajas de ajuste (Diff/Ajuste) */
+            .columna-presostato > div:nth-of-type(2) { grid-column: 2; grid-row: 3; margin: 0 !important; gap: 5px !important; } 
+            /* Display Digital Inferior */
+            .columna-presostato > div.control-group { grid-column: 2; grid-row: 4; margin: 0 !important; padding: 6px !important; } 
+            /* Texto Cut-out */
+            .columna-presostato > div:last-child { grid-column: 2; grid-row: 5; margin: 0 !important; text-align: left !important; } 
+
+            .columna-seguridad {
+                display: grid !important;
+                grid-template-columns: min-content 1fr;
+                gap: 5px 15px;
+                padding: 15px !important;
+                align-items: center;
+            }
+            .columna-seguridad > h3 { grid-column: 1 / -1; margin: 0; text-align: left; }
+            .columna-seguridad > .subtitle { grid-column: 1 / -1; margin: 0 0 5px 0; text-align: left; font-size: 11px; }
+            
+            .columna-seguridad > .danfoss-casing { 
+                grid-column: 1; 
+                grid-row: 3; 
+                transform: scale(0.85); 
+                transform-origin: center left; 
+                margin: -15px -20px -15px 0 !important; 
+            }
+            /* Relé Digital Inferior */
+            .columna-seguridad > div.control-group { grid-column: 2; grid-row: 3; margin: 0 !important; padding: 8px !important; }
         }
 
         @media (max-width: 768px) {
