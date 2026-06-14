@@ -409,8 +409,46 @@
             /* Ajustes Fullscreen dinámicos respetando la UI del navegador móvil */
             .ciclo-panel.fullscreen { padding: 60px 10px 20px 10px; height: 100dvh; max-width: 100%; min-width: 100%; margin: 0; }
             .ciclo-panel.fullscreen .ciclo-panel-tools { top: 10px; right: 10px; z-index: 10000; }
+        }
+
+        /* ORIENTACIÓN VERTICAL (Portrait) */
+        @media (max-width: 1024px) and (orientation: portrait) {
             .ciclo-panel.fullscreen .svg-container { max-height: 50vh; }
             .status-container { flex-direction: column; }
+        }
+
+        /* ORIENTACIÓN HORIZONTAL (Landscape) */
+        @media (max-width: 1024px) and (orientation: landscape) {
+            .status-container { flex-direction: row !important; align-items: stretch; gap: 8px; margin-top: 10px; }
+            
+            /* Optimizar Leyenda a cuadrícula 2x2 para ahorrar altura */
+            .status-container > div:first-child { 
+                flex: 1.2 !important; 
+                padding: 6px !important; 
+                display: grid !important; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 2px 6px !important;
+                font-size: 9px !important;
+            }
+            
+            /* Optimizar Botones Bypass */
+            .status-container > div:nth-child(2) {
+                flex: 0.8 !important;
+                gap: 4px !important;
+            }
+            .btn-bypass { font-size: 10px !important; padding: 4px !important; }
+
+            /* Optimizar Estado Global */
+            #estadoGlobal {
+                flex: 1.5 !important;
+                padding: 6px 10px !important;
+            }
+            #estadoTextoPrincipal { font-size: 13px !important; }
+            #motivoCorte { font-size: 9px !important; line-height: 1.1; margin-top: 4px;}
+            
+            /* Ajustar SVG para dejar espacio a la botonera inferior */
+            .svg-container { max-height: 65vh; }
+            .ciclo-panel.fullscreen .svg-container { max-height: 75vh; }
         }
 
         @media (max-width: 768px) {
